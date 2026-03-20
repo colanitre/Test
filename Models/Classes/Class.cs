@@ -16,4 +16,5 @@ public class Class
 
     // Navigation property
     public ICollection<Character> Characters { get; set; } = [];
+    public ICollection<Skill> Skills { get; set; } = [];
 }
