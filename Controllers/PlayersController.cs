@@ -156,7 +156,7 @@ public class PlayersController : ControllerBase
         var characters = player.Characters.Select(c => new CharacterDto(
             c.Id,
             c.Name,
-            c.Class,
+            c.Class?.Name ?? "Unknown",
             c.Level,
             c.Health,
             c.Mana,

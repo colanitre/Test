@@ -36,6 +36,7 @@ public class CharactersController : ControllerBase
 
         var characters = await _context.Characters
             .Where(c => c.PlayerId == playerId)
+            .Include(c => c.Class)
             .ToListAsync();
 
         return Ok(characters.Select(ToDto));
@@ -50,6 +51,7 @@ public class CharactersController : ControllerBase
         _logger.LogInformation("Fetching character ID: {CharacterId} for player ID: {PlayerId}", id, playerId);
         
         var character = await _context.Characters
+            .Include(c => c.Class)
             .FirstOrDefaultAsync(c => c.Id == id && c.PlayerId == playerId);
 
         if (character == null)
@@ -77,16 +79,18 @@ public class CharactersController : ControllerBase
             return NotFound(new { message = "Player not found" });
         }
 
-        var character = new Character
+        // Get the character class
+        var characterClass = await _context.Classes.FirstOrDefaultAsync(c => c.Name == createCharacterDto.Class);
+        if (characterClass == null)
         {
-            Name = createCharacterDto.Name,
-            Class = createCharacterDto.Class,
-            Level = createCharacterDto.Level ?? 1,
-            Health = createCharacterDto.Health ?? 100,
-            Mana = createCharacterDto.Mana ?? 50,
-            Experience = createCharacterDto.Experience ?? 0,
-            Description = createCharacterDto.Description,
-            PlayerId = playerId
+            _logger.LogWarning("Character class '{ClassName}' not found", createCharacterDto.Class);
+            return BadRequest(new { message = $"Character class '{createCharacterDto.Class}' not found" });
+        }
+
+        // Create character with stats initialized from class
+        var character = new Character(createCharacterDto.Name, characterClass, playerId)
+        {
+            Description = createCharacterDto.Description
         };
 
         _context.Characters.Add(character);
@@ -105,6 +109,7 @@ public class CharactersController : ControllerBase
         _logger.LogInformation("Updating character ID: {CharacterId} for player ID: {PlayerId}", id, playerId);
         
         var character = await _context.Characters
+            .Include(c => c.Class)
             .FirstOrDefaultAsync(c => c.Id == id && c.PlayerId == playerId);
 
         if (character == null)
@@ -113,8 +118,20 @@ public class CharactersController : ControllerBase
             return NotFound(new { message = "Character not found" });
         }
 
+        // If class name changed, look up the new class
+        if (character.Class?.Name != updateCharacterDto.Class)
+        {
+            var newClass = await _context.Classes.FirstOrDefaultAsync(c => c.Name == updateCharacterDto.Class);
+            if (newClass == null)
+            {
+                _logger.LogWarning("Character class '{ClassName}' not found", updateCharacterDto.Class);
+                return BadRequest(new { message = $"Character class '{updateCharacterDto.Class}' not found" });
+            }
+            character.Class = newClass;
+            character.ClassId = newClass.Id;
+        }
+
         character.Name = updateCharacterDto.Name;
-        character.Class = updateCharacterDto.Class;
         character.Level = updateCharacterDto.Level;
         character.Health = updateCharacterDto.Health;
         character.Mana = updateCharacterDto.Mana;
@@ -157,7 +174,7 @@ public class CharactersController : ControllerBase
         new(
             character.Id,
             character.Name,
-            character.Class,
+            character.Class?.Name ?? "Unknown",
             character.Level,
             character.Health,
             character.Mana,

@@ -50,6 +50,21 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<RpgContext>();
     db.Database.EnsureCreated();
+
+    // Seed character classes if not already present
+    if (!db.Classes.Any())
+    {
+        var classes = new List<RpgApi.Models.Class>
+        {
+            new RpgApi.Models.Mage(),
+            new RpgApi.Models.Warrior(),
+            new RpgApi.Models.Archer(),
+            new RpgApi.Models.Rogue()
+        };
+
+        db.Classes.AddRange(classes);
+        db.SaveChanges();
+    }
 }
 
 app.Run();
