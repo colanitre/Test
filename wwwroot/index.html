@@ -220,6 +220,17 @@
       font-weight: 700;
       margin-bottom: 4px;
     }
+    .delta-positive {
+      color: #1f7a3d;
+      font-weight: 700;
+    }
+    .delta-negative {
+      color: #b23a2f;
+      font-weight: 700;
+    }
+    .delta-neutral {
+      color: #6f5a33;
+    }
     @media (max-width: 768px) {
       body { padding: 10px; }
       .box { padding: 10px; }
@@ -726,13 +737,45 @@
       return;
     }
 
+    const deriveCharacterStats = (classStats, level) => {
+      const extraLevels = Math.max(0, Number(level || 1) - 1);
+      const baseStrength = Number(classStats.baseStrength || 0);
+      const baseAgility = Number(classStats.baseAgility || 0);
+      const baseIntelligence = Number(classStats.baseIntelligence || 0);
+      const baseWisdom = Number(classStats.baseWisdom || 0);
+      const baseCharisma = Number(classStats.baseCharisma || 0);
+      const baseEndurance = Number(classStats.baseEndurance || 0);
+
+      return {
+        maxHealth: (baseStrength * baseEndurance) + (10 * extraLevels),
+        maxMana: (baseIntelligence * baseWisdom) + (5 * extraLevels),
+        maxStamina: (baseEndurance * baseAgility) + (5 * extraLevels),
+        attack: (baseStrength * baseAgility) + (baseIntelligence * baseCharisma) + (2 * extraLevels),
+        defense: (baseEndurance * baseAgility) + (baseAgility * baseIntelligence) + (2 * extraLevels),
+        speed: (baseAgility * baseStrength) + extraLevels,
+        magic: (baseIntelligence * baseCharisma) + extraLevels
+      };
+    };
+
     const currentClass = state.currentCharacter?.class;
     const currentStats = currentClass || {};
     const statDelta = (key, value) => {
       const current = Number(currentStats[key] ?? 0);
       const delta = Number(value) - current;
       const prefix = delta >= 0 ? '+' : '';
-      return `${value} (${prefix}${delta})`;
+      const deltaClass = delta > 0 ? 'delta-positive' : delta < 0 ? 'delta-negative' : 'delta-neutral';
+      return `${value} <span class="${deltaClass}">(${prefix}${delta})</span>`;
+    };
+
+    const level = Number(state.currentCharacter?.level || 1);
+    const currentDerived = deriveCharacterStats(currentStats, level);
+    const nextDerived = deriveCharacterStats(option, level);
+    const derivedDelta = (key, value) => {
+      const current = Number(currentDerived[key] ?? 0);
+      const delta = Number(value) - current;
+      const prefix = delta >= 0 ? '+' : '';
+      const deltaClass = delta > 0 ? 'delta-positive' : delta < 0 ? 'delta-negative' : 'delta-neutral';
+      return `${value} <span class="${deltaClass}">(${prefix}${delta})</span>`;
     };
 
     const skills = Array.isArray(option.skills) ? option.skills : [];
@@ -742,6 +785,10 @@
 
     preview.innerHTML = `
       <div class="upgrade-preview-title">Preview: ${option.name} (${tierLabel(option.tier)})</div>
+      <div><strong>Derived at Lv${level}</strong></div>
+      <div>HP ${derivedDelta('maxHealth', nextDerived.maxHealth)} | Mana ${derivedDelta('maxMana', nextDerived.maxMana)} | Stamina ${derivedDelta('maxStamina', nextDerived.maxStamina)}</div>
+      <div>Attack ${derivedDelta('attack', nextDerived.attack)} | Defense ${derivedDelta('defense', nextDerived.defense)} | Speed ${derivedDelta('speed', nextDerived.speed)} | Magic ${derivedDelta('magic', nextDerived.magic)}</div>
+      <div style="margin-top:6px;"><strong>Base Attributes</strong></div>
       <div>STR ${statDelta('baseStrength', option.baseStrength)} | AGI ${statDelta('baseAgility', option.baseAgility)} | INT ${statDelta('baseIntelligence', option.baseIntelligence)}</div>
       <div>WIS ${statDelta('baseWisdom', option.baseWisdom)} | CHA ${statDelta('baseCharisma', option.baseCharisma)} | END ${statDelta('baseEndurance', option.baseEndurance)} | LUCK ${statDelta('baseLuck', option.baseLuck)}</div>
       <div style="margin-top:6px;"><strong>Tier Skills</strong></div>

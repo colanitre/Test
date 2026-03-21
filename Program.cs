@@ -172,21 +172,47 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    void MergeMissingSkills(RpgApi.Models.Class targetClass, IEnumerable<Skill> seededSkills)
+    void SyncClassSkills(RpgApi.Models.Class targetClass, IEnumerable<Skill> seededSkills)
     {
-        var existingSkillNames = targetClass.Skills
-            .Select(s => s.Name)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var existingSkillsByName = targetClass.Skills
+            .ToDictionary(s => s.Name, s => s, StringComparer.OrdinalIgnoreCase);
 
         foreach (var seededSkill in seededSkills)
         {
-            if (existingSkillNames.Contains(seededSkill.Name))
+            if (existingSkillsByName.TryGetValue(seededSkill.Name, out var existingSkill))
             {
+                existingSkill.Description = seededSkill.Description;
+                existingSkill.Type = seededSkill.Type;
+                existingSkill.Level = seededSkill.Level;
+                existingSkill.ManaCost = seededSkill.ManaCost;
+                existingSkill.StaminaCost = seededSkill.StaminaCost;
+                existingSkill.Cooldown = seededSkill.Cooldown;
+                existingSkill.RequiredLevel = seededSkill.RequiredLevel;
+                existingSkill.RequiredStrength = seededSkill.RequiredStrength;
+                existingSkill.RequiredAgility = seededSkill.RequiredAgility;
+                existingSkill.RequiredIntelligence = seededSkill.RequiredIntelligence;
+                existingSkill.RequiredWisdom = seededSkill.RequiredWisdom;
+                existingSkill.RequiredCharisma = seededSkill.RequiredCharisma;
+                existingSkill.RequiredEndurance = seededSkill.RequiredEndurance;
+                existingSkill.RequiredLuck = seededSkill.RequiredLuck;
+                existingSkill.StrengthModifier = seededSkill.StrengthModifier;
+                existingSkill.AgilityModifier = seededSkill.AgilityModifier;
+                existingSkill.IntelligenceModifier = seededSkill.IntelligenceModifier;
+                existingSkill.WisdomModifier = seededSkill.WisdomModifier;
+                existingSkill.CharismaModifier = seededSkill.CharismaModifier;
+                existingSkill.EnduranceModifier = seededSkill.EnduranceModifier;
+                existingSkill.LuckModifier = seededSkill.LuckModifier;
+                existingSkill.AttackPower = seededSkill.AttackPower;
+                existingSkill.DefensePower = seededSkill.DefensePower;
+                existingSkill.SpeedModifier = seededSkill.SpeedModifier;
+                existingSkill.MagicPower = seededSkill.MagicPower;
+                existingSkill.Element = seededSkill.Element;
+                existingSkill.ElementPowerMultiplier = seededSkill.ElementPowerMultiplier;
                 continue;
             }
 
             targetClass.Skills.Add(seededSkill);
-            existingSkillNames.Add(seededSkill.Name);
+            existingSkillsByName.Add(seededSkill.Name, seededSkill);
         }
     }
 
@@ -217,7 +243,7 @@ using (var scope = app.Services.CreateScope())
         existingBaseClass.IsAdvanced = seed.IsAdvanced;
         existingBaseClass.Branch = seed.Branch;
 
-        MergeMissingSkills(existingBaseClass, seed.Skills);
+        SyncClassSkills(existingBaseClass, seed.Skills);
     }
 
     db.SaveChanges();
@@ -305,14 +331,14 @@ using (var scope = app.Services.CreateScope())
                     Type = SkillType.Active,
                     RequiredLevel = requiredLevel,
                     Cooldown = Math.Max(1, 4 - tier),
-                    ManaCost = 8 * tier,
-                    StaminaCost = 6 * tier,
-                    AttackPower = 16 + (8 * tier),
-                    DefensePower = 4 + (2 * tier),
-                    SpeedModifier = 2 + tier,
-                    MagicPower = 6 + (5 * tier),
+                    ManaCost = 14 * tier,
+                    StaminaCost = 12 * tier,
+                    AttackPower = 70 + (30 * tier),
+                    DefensePower = 12 + (6 * tier),
+                    SpeedModifier = 8 + (3 * tier),
+                    MagicPower = 70 + (28 * tier),
                     Element = primaryElement,
-                    ElementPowerMultiplier = 1.15 + (0.08 * tier)
+                    ElementPowerMultiplier = 1.35 + (0.1 * tier)
                 };
 
                 var defenseSkill = new Skill
@@ -322,14 +348,14 @@ using (var scope = app.Services.CreateScope())
                     Type = SkillType.Passive,
                     RequiredLevel = requiredLevel,
                     Cooldown = 0,
-                    ManaCost = 3 * tier,
-                    StaminaCost = 3 * tier,
-                    AttackPower = 2 + tier,
-                    DefensePower = 12 + (7 * tier),
-                    SpeedModifier = 1 + tier,
-                    MagicPower = 5 + (4 * tier),
+                    ManaCost = 6 * tier,
+                    StaminaCost = 5 * tier,
+                    AttackPower = 10 + (4 * tier),
+                    DefensePower = 85 + (30 * tier),
+                    SpeedModifier = 4 + (2 * tier),
+                    MagicPower = 35 + (16 * tier),
                     Element = primaryElement,
-                    ElementPowerMultiplier = 1.0 + (0.04 * tier)
+                    ElementPowerMultiplier = 1.15 + (0.06 * tier)
                 };
 
                 var pinnacleSkill = new Skill
@@ -339,14 +365,14 @@ using (var scope = app.Services.CreateScope())
                     Type = SkillType.Ultimate,
                     RequiredLevel = requiredLevel,
                     Cooldown = Math.Max(2, 5 - tier),
-                    ManaCost = 14 * tier,
-                    StaminaCost = 10 * tier,
-                    AttackPower = 24 + (10 * tier),
-                    DefensePower = 6 + (3 * tier),
-                    SpeedModifier = 2 + tier,
-                    MagicPower = 10 + (7 * tier),
+                    ManaCost = 24 * tier,
+                    StaminaCost = 18 * tier,
+                    AttackPower = 110 + (45 * tier),
+                    DefensePower = 20 + (8 * tier),
+                    SpeedModifier = 10 + (3 * tier),
+                    MagicPower = 110 + (40 * tier),
                     Element = primaryElement,
-                    ElementPowerMultiplier = 1.25 + (0.1 * tier)
+                    ElementPowerMultiplier = 1.55 + (0.12 * tier)
                 };
 
                 var advancedClass = new RpgApi.Models.Class
@@ -397,7 +423,7 @@ using (var scope = app.Services.CreateScope())
         existingAdvancedClass.IsAdvanced = seed.IsAdvanced;
         existingAdvancedClass.Branch = seed.Branch;
 
-        MergeMissingSkills(existingAdvancedClass, seed.Skills);
+        SyncClassSkills(existingAdvancedClass, seed.Skills);
     }
 
     db.SaveChanges();
@@ -424,31 +450,9 @@ using (var scope = app.Services.CreateScope())
         {
             ("Thane", "Warrior", "hero_one", "A frontline fighter with strong defense.", 1),
             ("Mira", "Archer", "hero_one", "A precise ranged attacker.", 1),
-            ("Selene", "Mage", "arcane_ace", "A spellcaster focused on elemental damage.", 29),
+            ("Selene", "Mage", "arcane_ace", "A spellcaster focused on elemental damage.", 50),
             ("Nyx", "Rogue", "arcane_ace", "A swift striker that excels at critical hits.", 1)
         };
-
-        void ApplySeedLevelStats(Character character)
-        {
-            var extraLevels = Math.Max(0, character.Level - 1);
-            if (extraLevels == 0)
-            {
-                return;
-            }
-
-            character.MaxHealth += 10 * extraLevels;
-            character.MaxMana += 5 * extraLevels;
-            character.MaxStamina += 5 * extraLevels;
-            character.Attack += 2 * extraLevels;
-            character.Defense += 2 * extraLevels;
-            character.Speed += 1 * extraLevels;
-            character.Magic += 1 * extraLevels;
-
-            // Start seeded characters at full resources after stat scaling.
-            character.Health = character.MaxHealth;
-            character.Mana = character.MaxMana;
-            character.Stamina = character.MaxStamina;
-        }
 
         foreach (var (characterName, className, username, description, level) in starterCharacters)
         {
@@ -464,13 +468,29 @@ using (var scope = app.Services.CreateScope())
                 Level = level
             };
 
-            ApplySeedLevelStats(character);
+            character.RecalculateDerivedStats();
 
             db.Characters.Add(character);
         }
 
         db.SaveChanges();
     }
+
+    var allCharacters = db.Characters
+        .Include(c => c.Class)
+        .ToList();
+
+    foreach (var character in allCharacters)
+    {
+        if (character.Class == null)
+        {
+            continue;
+        }
+
+        character.RecalculateDerivedStats();
+    }
+
+    db.SaveChanges();
 
     // Seed all enemy classes that exist in the codebase.
     var enemyClassSeeds = new List<EnemyClass>
@@ -610,6 +630,8 @@ using (var scope = app.Services.CreateScope())
             enemy.Type = type.Value;
         }
 
+        enemy.RecalculateDerivedStats();
+
         db.Enemies.Add(enemy);
     }
 
@@ -642,8 +664,25 @@ using (var scope = app.Services.CreateScope())
         }
 
         greekGod.EnemyClassId = greekClass.Id;
+        greekGod.EnemyClass = greekClass;
         greekGod.Type = EnemyType.Godlike;
         greekGod.Level = level;
+        greekGod.RecalculateDerivedStats();
+    }
+
+    // Repair derived stats for existing enemies in case previous seeds used stale or invalid scaling.
+    var allEnemies = db.Enemies
+        .Include(e => e.EnemyClass)
+        .ToList();
+
+    foreach (var enemy in allEnemies)
+    {
+        if (enemy.EnemyClass == null)
+        {
+            continue;
+        }
+
+        enemy.RecalculateDerivedStats();
     }
 
     // Keep hardest enemies at level 100 even in pre-existing databases.

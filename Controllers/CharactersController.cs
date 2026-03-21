@@ -172,6 +172,7 @@ public class CharactersController : ControllerBase
         character.ClassId = targetClass.Id;
         character.Class = targetClass;
         character.Skills = targetClass.Skills.ToList();
+        character.RecalculateDerivedStats();
         character.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();

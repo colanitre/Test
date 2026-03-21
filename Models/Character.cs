@@ -50,21 +50,43 @@ public class Character
         Class = characterClass;
         ClassId = characterClass.Id;
         PlayerId = playerId;
-        // Initialize stats from the character class
-        MaxHealth = characterClass.BaseStrength * characterClass.BaseEndurance; // Assuming health is based on strength and endurance for simplicity
-        Health = MaxHealth;
-        MaxMana = characterClass.BaseIntelligence * characterClass.BaseWisdom; // Assuming mana is based on intelligence for simplicity
-        Mana = MaxMana;
-        MaxStamina = characterClass.BaseEndurance * characterClass.BaseAgility; // Assuming stamina is based on endurance and agility for simplicity
-        Stamina = MaxStamina;
-        HealthRegen = characterClass.BaseEndurance / 5;
-        ManaRegen = characterClass.BaseWisdom / 5;
-        StaminaRegen = characterClass.BaseAgility / 5;
-        Attack = (characterClass.BaseStrength * characterClass.BaseAgility) + (characterClass.BaseIntelligence * characterClass.BaseCharisma);
-        Defense = (characterClass.BaseEndurance * characterClass.BaseAgility) + (characterClass.BaseAgility * characterClass.BaseIntelligence);
-        Speed = characterClass.BaseAgility * characterClass.BaseStrength;
-        Magic = characterClass.BaseIntelligence * characterClass.BaseCharisma;
-        Skills = characterClass.Skills.ToList(); // Initialize with the list of skills from the character class
+        Level = 1;
+        Skills = characterClass.Skills.ToList();
+        RecalculateDerivedStats();
+    }
+
+    public void RecalculateDerivedStats(bool restoreResourcesToFull = true)
+    {
+        if (Class == null)
+        {
+            return;
+        }
+
+        Level = Math.Max(1, Level);
+        var extraLevels = Level - 1;
+
+        MaxHealth = (Class.BaseStrength * Class.BaseEndurance) + (10 * extraLevels);
+        MaxMana = (Class.BaseIntelligence * Class.BaseWisdom) + (5 * extraLevels);
+        MaxStamina = (Class.BaseEndurance * Class.BaseAgility) + (5 * extraLevels);
+        HealthRegen = Class.BaseEndurance / 5;
+        ManaRegen = Class.BaseWisdom / 5;
+        StaminaRegen = Class.BaseAgility / 5;
+        Attack = (Class.BaseStrength * Class.BaseAgility) + (Class.BaseIntelligence * Class.BaseCharisma) + (2 * extraLevels);
+        Defense = (Class.BaseEndurance * Class.BaseAgility) + (Class.BaseAgility * Class.BaseIntelligence) + (2 * extraLevels);
+        Speed = (Class.BaseAgility * Class.BaseStrength) + extraLevels;
+        Magic = (Class.BaseIntelligence * Class.BaseCharisma) + extraLevels;
+
+        if (restoreResourcesToFull)
+        {
+            Health = MaxHealth;
+            Mana = MaxMana;
+            Stamina = MaxStamina;
+            return;
+        }
+
+        Health = Math.Min(Math.Max(Health, 0), MaxHealth);
+        Mana = Math.Min(Math.Max(Mana, 0), MaxMana);
+        Stamina = Math.Min(Math.Max(Stamina, 0), MaxStamina);
     }
 
     public void Regenerate()

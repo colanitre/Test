@@ -47,6 +47,16 @@ public class Enemy
         Level = level ?? enemyClass.BaseLevel;
         Type = enemyClass.Type;
 
+        RecalculateDerivedStats();
+    }
+
+    public void RecalculateDerivedStats()
+    {
+        if (EnemyClass == null)
+        {
+            return;
+        }
+
         // Calculate difficulty multiplier based on enemy type
         double difficultyMultiplier = Type switch
         {
@@ -58,27 +68,32 @@ public class Enemy
             _ => 1.0
         };
 
-        // Apply level scaling: +2% per level above base level
-        double levelMultiplier = 1.0 + (Level - enemyClass.BaseLevel) * 0.02;
+        var effectiveLevel = Math.Max(1, Level);
+        var baseLevel = Math.Max(1, EnemyClass.BaseLevel);
+
+        // Scale safely both above and below base level without ever going negative.
+        double levelMultiplier = effectiveLevel >= baseLevel
+            ? 1.0 + ((effectiveLevel - baseLevel) * 0.02)
+            : Math.Max(0.25, 1.0 - ((baseLevel - effectiveLevel) * 0.01));
 
         // Initialize stats from the enemy class with difficulty and level multipliers
-        MaxHealth = (int)(enemyClass.BaseStrength * enemyClass.BaseEndurance * difficultyMultiplier * levelMultiplier);
+        MaxHealth = Math.Max(1, (int)(EnemyClass.BaseStrength * EnemyClass.BaseEndurance * difficultyMultiplier * levelMultiplier));
         Health = MaxHealth;
-        MaxMana = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier);
+        MaxMana = Math.Max(0, (int)(EnemyClass.BaseIntelligence * EnemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier));
         Mana = MaxMana;
-        MaxStamina = (int)(enemyClass.BaseEndurance * enemyClass.BaseAgility * difficultyMultiplier * levelMultiplier);
+        MaxStamina = Math.Max(0, (int)(EnemyClass.BaseEndurance * EnemyClass.BaseAgility * difficultyMultiplier * levelMultiplier));
         Stamina = MaxStamina;
-        HealthRegen = (int)(enemyClass.BaseEndurance * difficultyMultiplier * levelMultiplier / 5);
-        ManaRegen = (int)(enemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier / 5);
-        StaminaRegen = (int)(enemyClass.BaseAgility * difficultyMultiplier * levelMultiplier / 5);
-        Attack = (int)((enemyClass.BaseStrength * enemyClass.BaseAgility + enemyClass.BaseIntelligence * enemyClass.BaseWisdom) * difficultyMultiplier * levelMultiplier);
-        Defense = (int)((enemyClass.BaseEndurance * enemyClass.BaseStrength + enemyClass.BaseAgility * enemyClass.BaseIntelligence) * difficultyMultiplier * levelMultiplier);
-        Speed = (int)(enemyClass.BaseAgility * 2 * difficultyMultiplier * levelMultiplier);
-        Magic = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier);
+        HealthRegen = Math.Max(0, (int)(EnemyClass.BaseEndurance * difficultyMultiplier * levelMultiplier / 5));
+        ManaRegen = Math.Max(0, (int)(EnemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier / 5));
+        StaminaRegen = Math.Max(0, (int)(EnemyClass.BaseAgility * difficultyMultiplier * levelMultiplier / 5));
+        Attack = Math.Max(1, (int)((EnemyClass.BaseStrength * EnemyClass.BaseAgility + EnemyClass.BaseIntelligence * EnemyClass.BaseWisdom) * difficultyMultiplier * levelMultiplier));
+        Defense = Math.Max(1, (int)((EnemyClass.BaseEndurance * EnemyClass.BaseStrength + EnemyClass.BaseAgility * EnemyClass.BaseIntelligence) * difficultyMultiplier * levelMultiplier));
+        Speed = Math.Max(1, (int)(EnemyClass.BaseAgility * 2 * difficultyMultiplier * levelMultiplier));
+        Magic = Math.Max(0, (int)(EnemyClass.BaseIntelligence * EnemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier));
 
-        Skills = enemyClass.Skills?.ToList() ?? new List<Skill>();
-        ExperienceReward = (int)(Level * 10 * difficultyMultiplier);
-        Description = enemyClass.Description;
+        Skills = EnemyClass.Skills?.ToList() ?? new List<Skill>();
+        ExperienceReward = Math.Max(1, (int)(effectiveLevel * 10 * difficultyMultiplier));
+        Description = EnemyClass.Description;
     }
 
     public void Regenerate()
