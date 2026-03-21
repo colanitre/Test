@@ -15,14 +15,22 @@
     ul { margin: 0; padding-left: 18px; }
     .status { margin-top: 10px; color:#333; }
   </style>
+  <style>
+    .log-message { margin-bottom: 4px; padding: 2px 4px; border-radius: 3px; }
+    .log-info { background: #e8f4fd; color: #333; }
+    .log-player { background: #d4edda; color: #155724; border-left: 3px solid #28a745; }
+    .log-enemy { background: #f8d7da; color: #721c24; border-left: 3px solid #dc3545; }
+    .log-system { background: #fff3cd; color: #856404; border-left: 3px solid #ffc107; }
+    .log-error { background: #f8d7da; color: #721c24; border-left: 3px solid #dc3545; font-weight: bold; }
+    .log-time { color: #666; font-size: 11px; }
+    .log-content { font-weight: normal; }
+  </style>
 </head>
 <body>
-  <h1>RPG Fight Interface</h1>
+  <a href="/admin.html" style="margin-top: 10px;">Admin</a>
 
   <div class="box">
-    <h2>Setup</h2>
-                 in.html">Admin damage curve</a>
-    <div class="row" style="margin-top: 10px;">
+    <div class="row">
       <div>
         <label for="playerSelect">Player</label>
         <select id="playerSelect"></select>
@@ -36,183 +44,241 @@
         <select id="enemySelect"></select>
       </div>
     </div>
-    <div class="status" id="setupSta    <div class="status" id="setupSta    <div class="status" id="set/button>
-    <div class="status">Current fight id: <span id="fightId"></span></div>
+    <div class="status" id="setupStatus">Loading data...</div>
+    <button id="startFight">Start Fight</button>
   </div>
 
-  <div class="box" id="fightView">
-    <h2>Fight Viewer</h2>
-    <div id="statsView"></div>
-    <div id="movesView"></div>
+  <div class="box" id="playerProfile" style="display:none;">
+    <h3>Player Profile</h3>
+    <p><strong>Username:</strong> <span id="profileUsername"></span></p>
+    <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+    <h4>Characters</h4>
+    <div id="profileCharacters"></div>
   </div>
 
-  <div class="box">
-    <h2>Action</h2>
+  <div class="box" id="fightPanel" style="display:none;">
     <div class="row">
       <div>
-        <label for="skillSelect">Select Skill</label>
-        <select id="skillSelect"><option value="">Choose character first</option></select>
+        <label for="skillSelect">Skill</label>
+        <select id="skillSelect"></select>
       </div>
       <div>
-        <label for="turnFightId">Fight ID</label>
-        <input type="text" id="turnFightI        <input type="text" id   </div>
-    <butto    <butto    <butto    <butto    <butto  tton id="refreshSession">Refresh Fight</button>
+        <label for="moveInput">Move</label>
+        <input type="text" id="moveInput" placeholder="Enter move" />
+      </div>
+    </div>
+    <button id="attackButton">Attack</button>
+    <button id="refreshSession">Refresh Session</button>
+    <button id="clearLogButton">Clear Log</button>
+    <div id="battleLog" style="width: 100%; height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 8px; overflow-y: auto; background: #f9f9f9; font-family: monospace; font-size: 12px; line-height: 1.4;"></div>
   </div>
 
-  <div class="box">
-    <h2>Console</h2>
-    <textarea id="console" readonly style="width: 100%; height: 200px;"></textarea>
-  </div>
+<script>
+  const state = { players: [], enemies: [], currentCharacter: null, currentFight: null };
 
-<script><script><script><script><script><script><[], currentCharacter: null, currentFight: null };
+  const addLogMessage = (message, type = 'info') => {
+    const logEl = document.getElementById('battleLog');
+    const timestamp = new Date().toLocaleTimeString();
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `log-message log-${type}`;
+    messageDiv.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-content">${message}</span>`;
+    logEl.appendChild(messageDiv);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
 
-  const log = (message) => {
-    const c = document.getElementById('console');
-    c.value += message + '\n';
-    c.scrollTop = c.scrollHeight;
+  const log = (message) => addLogMessage(message, 'info');
+  const logPlayer = (message) => addLogMessage(message, 'player');
+  const logEnemy = (message) => addLogMessage(message, 'enemy');
+  const logSystem = (message) => addLogMessage(message, 'system');
+  const clearBattleLog = () => {
+    document.getElementById('battleLog').innerHTML = '';
   };
 
   const fetchJson = async (url, options = {}) => {
-    const resp = await fetch(url    const resp = await fetch(await resp.text();
-    try { return JSON.parse(text); } catch { return text; }
-  };  };  };  };  };  };t   };  sion) => {
-    const stats = document.getElementById('statsV    const stats = document.getElementById('statsV    const stats = document.getElementByI    moves.innerHTML = '';
-
-
-   const stats = document.getElementById('sts.textContent = 'No active fight. Start one.';
-      moves.textContent = '';
-      return;
+    try {
+      const res = await fetch(url, options);
+      return await res.json();
+    } catch (e) {
+      logError('Fetch error: ' + e.message);
+      return null;
     }
-
-    const player = {
-      name: session.characterName,
-      hp: session.characterCurrentHp,
-      maxHp: session.characterMaxHp,
-      attack: session.characterAttack,
-      defense: session.characterDefense,
-      level: session.characterLevel
-    };
-    const enemy = {
-      name: session.enemyName,
-      hp: session.enemyCurrentHp,
-      maxHp: session.enemyMaxHp,
-      attack: session.enemyAttack,
-      defense: session.enemyDefense      defense: session.enemyDefel
-    };
-
-    const panel = (title, body) => {
-      const       const       const       const       const       const       const      div      const       const       const       const       conpx       const       const       const       = '6px';
-      div.innerHTML = `<h3>${title}</h3>${body}`;
-      return div;
-    };
-
-    stats.appendChild(panel('Player', `Name: <strong>${player.name}</strong><br>Level: ${player.level}<br>HP: ${player.hp}/${player.maxHp}<br>Attack: ${player.attack}<br>Defense: ${player.defense}`));
-    stats.appendChild(panel('Enemy', `Name: <strong>${enemy.name}</strong><br>Level: ${enemy.level}<br>HP: ${enemy.hp}/${enemy.maxHp}<br>Attack: ${enemy.attack}<br>Defense: ${enemy.defense}`));
-    stats.appendChild(panel('Fight status', `Turn: ${session.currentTurn}<br>Status    stats.appendCh}<br>Winner: ${session.isVictory ? session.characterName : session.status === 'Completed' ? session.enemyName : 'None'}`));
-
-    const history = '<ul>' + (session.moves || []).map(m => `<li>${new Date(m.timestamp).toLocaleTimeString()} - ${m.isPlayer ? session.characterName : session.enemyName} ${m.description}</li>`).join('') + '</ul>';
-    moves.appendChild(panel('Recent actions', history));
-
-    state.currentFight = session;
   };
 
+  const logError = (message) => addLogMessage(message, 'error');
+
   const loadPlayers = async () => {
-    const players = await fe    const playplay   ');
-    state.players = Array.isArray(players) ? players : [];
-    const playerSelect = document.getElementById('playerSelect');
-    playerSelect.innerHTML = '<option value="">Select player</option>' + state.players.map(p => `<option value="${p.id}">${p.username}</option>`).join('');
+    const players = await fetchJson('/api/players');
+    if (!Array.isArray(players)) {
+      logError('Failed to load players');
+      return;
+    }
+    state.players = players;
+    const select = document.getElementById('playerSelect');
+    select.innerHTML = '<option value="">Select player</option>' + players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     document.getElementById('setupStatus').textContent = 'Players loaded.';
   };
 
   const loadEnemies = async () => {
     const enemies = await fetchJson('/api/enemies');
-    state.enemies = Array.isArray(enemies) ? enemies : [];
-    const enemySelect = document.getElementById('enemySelect');
-    enemySelect.innerHTML = '<option value="">Random enemy</option>' + state.enemies.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-    document.getElementById('setupStatus').textContent = 'Enemies loaded.';
+    if (!Array.isArray(enemies)) {
+      logError('Failed to load enemies');
+      return;
+    }
+    state.enemies = enemies;
+    const select = document.getElementById('enemySelect');
+    select.innerHTML = '<option value="">Select enemy</option>' + enemies.map(e => `<option value="${e.id}">${e.name} (${e.type}, Lv${e.level})</option>`).join('');
+  };
+
+  const loadPlayerProfile = async (playerId) => {
+    if (!playerId) {
+      document.getElementById('playerProfile').style.display = 'none';
+      return;
+    }
+    const player = await fetchJson(`/api/players/${playerId}`);
+    if (!player) {
+      logError('Failed to load player profile');
+      return;
+    }
+    document.getElementById('profileUsername').textContent = player.username;
+    document.getElementById('profileEmail').textContent = player.email;
+    const charsDiv = document.getElementById('profileCharacters');
+    charsDiv.innerHTML = player.characters.map(c => `
+      <div style="border: 1px solid #ccc; padding: 8px; margin-bottom: 8px; border-radius: 4px;">
+        <strong>${c.name}</strong> (Level ${c.level}) - ${c.class}<br>
+        Health: ${c.health}, Mana: ${c.mana}, Experience: ${c.experience}<br>
+        ${c.description || 'No description'}
+      </div>
+    `).join('');
+    document.getElementById('playerProfile').style.display = 'block';
   };
 
   const loadCharacters = async (playerId) => {
-    if (!playerId) return;
+    if (!playerId) {
+      document.getElementById('characterSelect').innerHTML = '<option value="">Select player first</option>';
+      return;
+    }
     const chars = await fetchJson(`/api/players/${playerId}/characters`);
     const select = document.getElementById('characterSelect');
-    if (!Array.isArray(chars)) return;
+    if (!Array.isArray(chars)) {
+      select.innerHTML = '<option value="">Could not load characters</option>';
+      logError('Failed to load characters: ' + JSON.stringify(chars));
+      return;
+    }
     select.innerHTML = '<option value="">Select character</option>' + chars.map(c => `<option value="${c.id}" data-name="${c.name}">${c.name} (Lv${c.level})</option>`).join('');
     document.getElementById('setupStatus').textContent = `Characters loaded for player ${playerId}.`;
   };
 
   const loadSkills = async (playerId, characterId) => {
-    if (!playerId || !characterId) return;
-    const character = await fetchJson(`/api/players/${playerId}/characters/${characterId}`);
-    state.currentCharacter = character;
-    const select = document.getElementById('skillSelect');
-    if (!character || !character.skills) {
-      select.innerHTML = '<option value="">No skills available</option>';
+    const skillSelect = document.getElementById('skillSelect');
+    if (!playerId || !characterId) {
+      skillSelect.innerHTML = '<option value="">Choose character first</option>';
       return;
     }
-    select.innerHTML = '<option value="">Select skill</option>' + character.skills.map(s => `<option value=    select.innerHTML = 'ion>`).join('');
+    const character = await fetchJson(`/api/players/${playerId}/characters/${characterId}`);
+    if (!character || !Array.isArray(character.skills)) {
+      skillSelect.innerHTML = '<option value="">Skills not available</option>';
+      return;
+    }
+    state.currentCharacter = character;
+    skillSelect.innerHTML = '<option value="">Select skill</option>' + character.skills.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
   };
 
-  document.getElementById('playerSelect').addEventListener('change', async (e) => {
-    const pid = e.target.value;
-    await loadCharacters(pid);
-    document.getElementById('skillSelect').innerHTML = '<option value="">Choose character first</option>';
-  });
+  const startFight = async () => {
+    const playerId = document.getElementById('playerSelect').value;
+    const characterId = document.getElementById('characterSelect').value;
+    const enemyId = document.getElementById('enemySelect').value;
+    if (!playerId || !characterId || !enemyId) {
+      logError('Choose player, character, and enemy first');
+      return;
+    }
+    const payload = { playerId: parseInt(playerId), characterId: parseInt(characterId), enemyId: parseInt(enemyId) };
+    const result = await fetch('/api/fights/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!result.ok) {
+      logError('Failed to start fight');
+      return;
+    }
+    const fight = await result.json();
+    state.currentFight = fight;
+    document.getElementById('fightPanel').style.display = 'block';
+    clearBattleLog();
+    logSystem('⚔️ Fight started! ⚔️');
+    loadSkills(playerId, characterId);
+  };
 
-  document.getElementById('characterSelect').addEventListener('change', async (e) => {
+  // Event listeners
+  document.getElementById('playerSelect').addEventListener('change', (e) => {
+    loadCharacters(e.target.value);
+    loadPlayerProfile(e.target.value);
+  });
+  document.getElementById('characterSelect').addEventListener('change', (e) => {
     const pid = document.getElementById('playerSelect').value;
     const cid = e.target.value;
-    await loadSkills(pid, cid);
+    loadSkills(pid, cid);
   });
-
-  document.getEl  document.getEl  document.getEl  documen)   document.getEl  document.getEl  document.getEl  documen)   document.getEl  doe);
-    const     const     const     const t.getEleme    const     const     const     const t.getEleme    ce =     const     const     const     const alue;
-    if (!playerId || !characterId) { log('Choose player and character')    if (!pla
-    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    cofights/s    con    con    con    con    con    con    ct-Type':'application/json'}, body: JSON.stringify(payload)
+  document.getElementById('startFight').addEventListener('click', startFight);
+  document.getElementById('attackButton').addEventListener('click', async () => {
+    const skillId = document.getElementById('skillSelect').value;
+    const move = document.getElementById('moveInput').value;
+    if (!skillId) {
+      logError('Select skill first');
+      return;
+    }
+    const playerId = document.getElementById('playerSelect').value;
+    const payload = { PlayerId: parseInt(playerId), SkillId: parseInt(skillId) };
+    const result = await fetch(`/api/fights/${state.currentFight.id}/turn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-
-                              
-                                                                                                          Id    alue = result.id;
-      renderFight(result);
-      log(`Fight started: ${result.characterN      log(`Fight started: ${result.characterN      log(`Fightfight error: ' + JSON.stringify(result));
+    if (!result.ok) {
+      logError('Attack failed');
+      return;
     }
-  };
-
-  document.getElementById('takeTurn').onclick = async () => {
-    const fightId = document.getElementById('turnFightId').value;
-    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId =  !playerId) { log('Select fight and skill first'); return; }
-
-    const result = await fetchJson(`/api/fights/${fightId}/turn`, {
-      method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ playerId, skillId })
-    });
-
-    if (result && result.id) {
-      document.getElementById('turnFightId').value = result.id;
-      renderFight(result);
-      log(`Turn taken by ${result.characterName}: skill ${document.getElementById('skillSelect').selectedOptions[0].text}`);
-    } else {
-      log('Turn error: ' + JSON.stringify(result));
+    const response = await result.json();
+    
+    // Log the moves from this turn
+    if (response.moves && Array.isArray(response.moves)) {
+      response.moves.forEach(move => {
+        if (move.isPlayer) {
+          logPlayer(`🎯 ${move.description}`);
+        } else {
+          logEnemy(`👹 ${move.description}`);
+        }
+      });
     }
-  };
-
-  document.getElementById('refreshSession').onclick = async () => {
-    const fightId = document.getElementById('turnFightId').value;
-    if (!fightId) { log('No fight selected'); return; }
-    const result = await fetchJson(`/api/fights/${fightId}`);
-    if (result && result.id) {
-      renderFight(result);
-      log('Session refreshed');
-    } else {
-      log('Refresh error: ' + JSON.stringify(result));
+    
+    // Check for victory/defeat
+    if (response.status === 'Completed') {
+      if (response.isVictory) {
+        logSystem('🎉 VICTORY! You defeated the enemy! 🎉');
+        // Refresh player profile after victory
+        const playerId = document.getElementById('playerSelect').value;
+        loadPlayerProfile(playerId);
+        loadCharacters(playerId);
+      } else {
+        logSystem('💀 DEFEAT! You were defeated... 💀');
+      }
     }
-  };
+  });
+  document.getElementById('refreshSession').addEventListener('click', async () => {
+    if (!state.currentFight) return;
+    const session = await fetchJson(`/api/fights/${state.currentFight.id}`);
+    if (!session) {
+      logError('Failed to refresh session');
+      return;
+    }
+    logSystem('🔄 Session refreshed');
+    // Could add more detailed status display here if needed
+  });
+  document.getElementById('clearLogButton').addEventListener('click', clearBattleLog);
 
-  const init = async () => {
-    await Promise.all([loadPlayers(), loadEnemies()]);
-    document.getElementById('setupStatus').textContent = 'Ready';
-  };
-
-  init();
+  // Init
+  loadPlayers();
+  loadEnemies();
 </script>
 </body>
 </html>

@@ -44,20 +44,30 @@ public class Enemy
         Level = enemyClass.BaseLevel;
         Type = enemyClass.Type;
 
-        // Initialize stats from the enemy class
-        MaxHealth = enemyClass.BaseStrength * enemyClass.BaseEndurance;
+        // Calculate difficulty multiplier based on enemy type
+        double difficultyMultiplier = Type switch
+        {
+            EnemyType.Common => 1.0,
+            EnemyType.Elite => 2.0,
+            EnemyType.Boss => 3.0,
+            EnemyType.Legendary => 4.0,
+            _ => 1.0
+        };
+
+        // Initialize stats from the enemy class with difficulty multiplier
+        MaxHealth = (int)(enemyClass.BaseStrength * enemyClass.BaseEndurance * difficultyMultiplier);
         Health = MaxHealth;
-        MaxMana = enemyClass.BaseIntelligence * enemyClass.BaseWisdom;
+        MaxMana = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier);
         Mana = MaxMana;
-        MaxStamina = enemyClass.BaseEndurance * enemyClass.BaseAgility;
+        MaxStamina = (int)(enemyClass.BaseEndurance * enemyClass.BaseAgility * difficultyMultiplier);
         Stamina = MaxStamina;
-        Attack = enemyClass.BaseStrength * enemyClass.BaseAgility;
-        Defense = enemyClass.BaseEndurance * enemyClass.BaseStrength;
-        Speed = enemyClass.BaseAgility * 2;
-        Magic = enemyClass.BaseIntelligence * enemyClass.BaseWisdom;
+        Attack = (int)(enemyClass.BaseStrength * enemyClass.BaseAgility * difficultyMultiplier);
+        Defense = (int)(enemyClass.BaseEndurance * enemyClass.BaseStrength * difficultyMultiplier);
+        Speed = (int)(enemyClass.BaseAgility * 2 * difficultyMultiplier);
+        Magic = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier);
 
         Skills = enemyClass.Skills?.ToList() ?? new List<Skill>();
-        ExperienceReward = Level * 10;
+        ExperienceReward = (int)(Level * 10 * difficultyMultiplier);
         Description = enemyClass.Description;
     }
 }

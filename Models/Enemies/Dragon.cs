@@ -6,7 +6,7 @@ public class Dragon : EnemyClass
     {
         Name = "Ancient Dragon";
         Description = "A massive, fire-breathing beast with incredible power and wisdom.";
-        Type = EnemyType.Boss;
+        Type = EnemyType.Legendary;
         BaseLevel = 10;
         BaseStrength = 20;
         BaseAgility = 15;

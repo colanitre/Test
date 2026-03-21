@@ -226,6 +226,8 @@ public class FightsController : ControllerBase
         var characterCooldowns = session.GetCharacterCooldowns();
         var enemyCooldowns = session.GetEnemyCooldowns();
 
+        var random = new Random();
+
         var playerSkill = character.Skills.FirstOrDefault(s => s.Id == dto.SkillId);
         if (playerSkill == null)
             return BadRequest(new { message = "Invalid skill" });
@@ -243,7 +245,8 @@ public class FightsController : ControllerBase
                         + enemy.Magic * _damageConfig.EnemyMagicDefenseWeight
                         + enemy.Stamina * _damageConfig.EnemyStaminaDefenseWeight;
 
-        var plDamage = Math.Max(_damageConfig.MinimumDamage, (int)Math.Floor(charPower + skillPower - charDefense));
+        var basePlDamage = Math.Max(_damageConfig.MinimumDamage, (int)Math.Floor(charPower + skillPower - charDefense));
+        var plDamage = (int)Math.Max(_damageConfig.MinimumDamage, Math.Floor(basePlDamage * (0.9 + random.NextDouble() * 0.2)));
         session.EnemyCurrentHp -= plDamage;
         session.Moves.Add(new FightMove
         {
@@ -288,15 +291,20 @@ public class FightsController : ControllerBase
 
         if (enemySkill != null)
         {
+            var enemySkillPower = enemySkill.AttackPower * _damageConfig.SkillAttackWeight
+                                + enemySkill.MagicPower * _damageConfig.SkillMagicWeight
+                                + enemySkill.SpeedModifier * _damageConfig.SkillSpeedWeight;
             enemyCooldowns[enemySkill.Id] = enemySkill.Cooldown;
-            enemyDamage = Math.Max(_damageConfig.MinimumDamage,
-                (int)Math.Floor(enemyPower + enemySkill.AttackPower * 1.5 + enemySkill.MagicPower * 1.5 - enemyDefense));
+            var baseEnemyDamage = Math.Max(_damageConfig.MinimumDamage,
+                (int)Math.Floor(enemyPower + enemySkillPower - enemyDefense * 0.5));
+            enemyDamage = (int)Math.Max(_damageConfig.MinimumDamage, Math.Floor(baseEnemyDamage * (0.9 + random.NextDouble() * 0.2)));
             enemyEvent = $"Enemy uses {enemySkill.Name}; deals {enemyDamage} damage.";
         }
         else
         {
-            enemyDamage = Math.Max(_damageConfig.MinimumDamage,
-                (int)Math.Floor(enemyPower - enemyDefense));
+            var baseEnemyDamage = Math.Max(_damageConfig.MinimumDamage,
+                (int)Math.Floor(enemyPower - enemyDefense * 0.5));
+            enemyDamage = (int)Math.Max(_damageConfig.MinimumDamage, Math.Floor(baseEnemyDamage * (0.9 + random.NextDouble() * 0.2)));
             enemyEvent = $"Enemy attacks normally; deals {enemyDamage} damage.";
         }
 

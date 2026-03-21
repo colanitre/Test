@@ -136,7 +136,16 @@ using (var scope = app.Services.CreateScope())
             new Enemy("Goblin Warrior", goblinClass) { Name = "Goblin Warrior", Level = 2 },
             new Enemy("Orc Warrior", orcClass) { Name = "Orc Warrior" },
             new Enemy("Orc Chieftain", orcClass) { Name = "Orc Chieftain", Level = 5 },
-            new Enemy("Ancient Red Dragon", dragonClass) { Name = "Ancient Red Dragon" }
+            new Enemy("Ancient Red Dragon", dragonClass) { Name = "Ancient Red Dragon" },
+            new Enemy("Ancient Blue Dragon", dragonClass) { Name = "Ancient Blue Dragon", Level = 10 },
+            new Enemy("Ancient Green Dragon", dragonClass) { Name = "Ancient Green Dragon", Level = 8 },
+             new Enemy("Ancient Black Dragon", dragonClass) { Name = "Ancient Black Dragon", Level = 12 },
+             new Enemy("Ancient White Dragon", dragonClass) { Name = "Ancient White Dragon", Level = 9 },
+             new Enemy("Ancient Gold Dragon", dragonClass) { Name = "Ancient Gold Dragon", Level = 15 },
+             new Enemy("Ancient Silver Dragon", dragonClass) { Name = "Ancient Silver Dragon", Level = 14 },
+             new Enemy("Ancient Bronze Dragon", dragonClass) { Name = "Ancient Bronze Dragon", Level = 13 },
+             new Enemy("Ancient Copper Dragon", dragonClass) { Name = "Ancient Copper Dragon", Level = 11 },
+             new Enemy("Legendary Brass Dragon", dragonClass) { Name = "Legendary Brass Dragon", Level = 15, Type = EnemyType.Legendary }
         };
 
         db.Enemies.AddRange(enemies);
