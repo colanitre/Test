@@ -27,6 +27,20 @@ public class FightSession
     public int EnemyCurrentHp { get; set; }
     public int CharacterMaxHp { get; set; }
     public int EnemyMaxHp { get; set; }
+    public int CharacterCurrentMana { get; set; }
+    public int CharacterMaxMana { get; set; }
+    public int EnemyCurrentMana { get; set; }
+    public int EnemyMaxMana { get; set; }
+    public int CharacterCurrentStamina { get; set; }
+    public int CharacterMaxStamina { get; set; }
+    public int EnemyCurrentStamina { get; set; }
+    public int EnemyMaxStamina { get; set; }
+    public int CharacterHealthRegen { get; set; }
+    public int CharacterManaRegen { get; set; }
+    public int CharacterStaminaRegen { get; set; }
+    public int EnemyHealthRegen { get; set; }
+    public int EnemyManaRegen { get; set; }
+    public int EnemyStaminaRegen { get; set; }
     public int CharacterAttack { get; set; }
     public int CharacterDefense { get; set; }
     public int EnemyAttack { get; set; }
@@ -41,6 +55,10 @@ public class FightSession
     public string EnemyCooldownJson { get; set; } = JsonSerializer.Serialize(new Dictionary<int, int>());
     public string CharacterSkillIdsJson { get; set; } = JsonSerializer.Serialize(new List<int>());
     public string EnemySkillIdsJson { get; set; } = JsonSerializer.Serialize(new List<int>());
+    
+    // Passive skills tracking
+    public string CharacterActivePassiveSkillsJson { get; set; } = JsonSerializer.Serialize(new List<int>());
+    public string EnemyActivePassiveSkillsJson { get; set; } = JsonSerializer.Serialize(new List<int>());
 
     public virtual ICollection<FightMove> Moves { get; set; } = new List<FightMove>();
 
@@ -53,4 +71,10 @@ public class FightSession
     public void SetEnemyCooldowns(Dictionary<int, int> values) => EnemyCooldownJson = JsonSerializer.Serialize(values);
     public void SetCharacterSkillIds(List<int> ids) => CharacterSkillIdsJson = JsonSerializer.Serialize(ids);
     public void SetEnemySkillIds(List<int> ids) => EnemySkillIdsJson = JsonSerializer.Serialize(ids);
+    
+    public List<int> GetCharacterActivePassiveSkills() => JsonSerializer.Deserialize<List<int>>(CharacterActivePassiveSkillsJson) ?? new();
+    public List<int> GetEnemyActivePassiveSkills() => JsonSerializer.Deserialize<List<int>>(EnemyActivePassiveSkillsJson) ?? new();
+    
+    public void SetCharacterActivePassiveSkills(List<int> ids) => CharacterActivePassiveSkillsJson = JsonSerializer.Serialize(ids);
+    public void SetEnemyActivePassiveSkills(List<int> ids) => EnemyActivePassiveSkillsJson = JsonSerializer.Serialize(ids);
 }

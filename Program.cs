@@ -47,14 +47,30 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RPG API V1");
+        c.RoutePrefix = "swagger";
+    });
+}
+else
+{
+    // Enable Swagger in all environments for the web UI
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RPG API V1");
+        c.RoutePrefix = "api";
+    });
 }
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthorization();
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 // Initialize database
 using (var scope = app.Services.CreateScope())

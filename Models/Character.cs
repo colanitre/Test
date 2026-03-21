@@ -9,8 +9,14 @@ public class Character
     public string Name { get; set; } = string.Empty;
     public int Level { get; set; } = 0;
     public int Health { get; set; }
+    public int MaxHealth { get; set; }
     public int Mana { get; set; }
+    public int MaxMana { get; set; }
     public int Stamina { get; set; }
+    public int MaxStamina { get; set; }
+    public int HealthRegen { get; set; }
+    public int ManaRegen { get; set; }
+    public int StaminaRegen { get; set; }
     public int Attack { get; set; }
     public int Defense { get; set; }
     public int Speed { get; set; }
@@ -44,13 +50,26 @@ public class Character
         ClassId = characterClass.Id;
         PlayerId = playerId;
         // Initialize stats from the character class
-        Health = characterClass.BaseStrength * characterClass.BaseEndurance; // Assuming health is based on strength and endurance for simplicity
-        Mana = characterClass.BaseIntelligence * characterClass.BaseWisdom; // Assuming mana is based on intelligence for simplicity
-        Stamina = characterClass.BaseEndurance * characterClass.BaseAgility; // Assuming stamina is based on endurance and agility for simplicity
+        MaxHealth = characterClass.BaseStrength * characterClass.BaseEndurance; // Assuming health is based on strength and endurance for simplicity
+        Health = MaxHealth;
+        MaxMana = characterClass.BaseIntelligence * characterClass.BaseWisdom; // Assuming mana is based on intelligence for simplicity
+        Mana = MaxMana;
+        MaxStamina = characterClass.BaseEndurance * characterClass.BaseAgility; // Assuming stamina is based on endurance and agility for simplicity
+        Stamina = MaxStamina;
+        HealthRegen = characterClass.BaseEndurance / 5;
+        ManaRegen = characterClass.BaseWisdom / 5;
+        StaminaRegen = characterClass.BaseAgility / 5;
         Attack = characterClass.BaseStrength * characterClass.BaseAgility; // Assuming attack is based on strength and agility for simplicity
         Defense = characterClass.BaseEndurance * characterClass.BaseAgility; // Assuming defense is based on endurance and agility for simplicity
         Speed = characterClass.BaseAgility*characterClass.BaseStrength ; // Assuming speed is based on agility for simplicity
         Magic = characterClass.BaseIntelligence * characterClass.BaseCharisma; // Assuming magic is based on intelligence and charisma for simplicity
         Skills = characterClass.Skills.ToList(); // Initialize with the list of skills from the character class
+    }
+
+    public void Regenerate()
+    {
+        Health = Math.Min(Health + HealthRegen, MaxHealth);
+        Mana = Math.Min(Mana + ManaRegen, MaxMana);
+        Stamina = Math.Min(Stamina + StaminaRegen, MaxStamina);
     }
 }

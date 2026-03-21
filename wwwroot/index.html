@@ -70,11 +70,48 @@
     <button id="attackButton">Attack</button>
     <button id="refreshSession">Refresh Session</button>
     <button id="clearLogButton">Clear Log</button>
-    <div id="battleLog" style="width: 100%; height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 8px; overflow-y: auto; background: #f9f9f9; font-family: monospace; font-size: 12px; line-height: 1.4;"></div>
+    
+    <div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+      <h4 style="margin-top: 0;">Passive Skills</h4>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;">
+        <div>
+          <label for="passiveSkillSelect">Select Passive Skill</label>
+          <select id="passiveSkillSelect"></select>
+        </div>
+        <div style="display: flex; align-items: flex-end; gap: 8px;">
+          <button id="activatePassiveButton" style="flex: 1;">Activate</button>
+          <button id="deactivatePassiveButton" style="flex: 1;">Deactivate</button>
+        </div>
+      </div>
+      <div id="activePassivesDisplay" style="margin-top: 8px; padding: 8px; background: white; border-radius: 3px; min-height: 20px; font-size: 12px;">Active: None</div>
+    </div>
+    
+    <div id="battleLog" style="width: 100%; height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 8px; overflow-y: auto; background: #f9f9f9; font-family: monospace; font-size: 12px; line-height: 1.4; margin-top: 12px;"></div>
   </div>
 
 <script>
   const state = { players: [], enemies: [], currentCharacter: null, currentFight: null };
+
+  // Load saved character selection from localStorage
+  const loadSavedCharacter = () => {
+    const savedPlayerId = localStorage.getItem('selectedPlayerId');
+    const savedCharacterId = localStorage.getItem('selectedCharacterId');
+    if (savedPlayerId) {
+      document.getElementById('playerSelect').value = savedPlayerId;
+      loadCharacters(savedPlayerId);
+      loadPlayerProfile(savedPlayerId);
+    }
+    if (savedCharacterId && savedPlayerId) {
+      setTimeout(() => {
+        const charSelect = document.getElementById('characterSelect');
+        if (charSelect.querySelector(`option[value="${savedCharacterId}"]`)) {
+          charSelect.value = savedCharacterId;
+          const event = new Event('change');
+          charSelect.dispatchEvent(event);
+        }
+      }, 100);
+    }
+  };
 
   const addLogMessage = (message, type = 'info') => {
     const logEl = document.getElementById('battleLog');
@@ -170,17 +207,24 @@
 
   const loadSkills = async (playerId, characterId) => {
     const skillSelect = document.getElementById('skillSelect');
+    const passiveSkillSelect = document.getElementById('passiveSkillSelect');
     if (!playerId || !characterId) {
       skillSelect.innerHTML = '<option value="">Choose character first</option>';
+      passiveSkillSelect.innerHTML = '<option value="">Choose character first</option>';
       return;
     }
     const character = await fetchJson(`/api/players/${playerId}/characters/${characterId}`);
     if (!character || !Array.isArray(character.skills)) {
       skillSelect.innerHTML = '<option value="">Skills not available</option>';
+      passiveSkillSelect.innerHTML = '<option value="">Skills not available</option>';
       return;
     }
     state.currentCharacter = character;
     skillSelect.innerHTML = '<option value="">Select skill</option>' + character.skills.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    
+    // Populate passive skills separately
+    const passiveSkills = character.skills.filter(s => s.type === 'Passive');
+    passiveSkillSelect.innerHTML = '<option value="">Select passive</option>' + passiveSkills.map(s => `<option value="${s.id}">${s.name} (Level ${s.requiredLevel})</option>`).join('');
   };
 
   const startFight = async () => {
@@ -207,6 +251,69 @@
     clearBattleLog();
     logSystem('⚔️ Fight started! ⚔️');
     loadSkills(playerId, characterId);
+    updateActivePassivesDisplay();
+  };
+
+  const updateActivePassivesDisplay = () => {
+    if (!state.currentFight || !state.currentFight.characterActivePassiveSkills) {
+      document.getElementById('activePassivesDisplay').textContent = 'Active: None';
+      return;
+    }
+    const activeIds = state.currentFight.characterActivePassiveSkills;
+    if (activeIds.length === 0) {
+      document.getElementById('activePassivesDisplay').textContent = 'Active: None';
+      return;
+    }
+    const activeNames = state.currentCharacter.skills
+      .filter(s => activeIds.includes(s.id))
+      .map(s => `${s.name} (Mana: ${s.manaCost}/turn, Stamina: ${s.staminaCost}/turn)`)
+      .join(', ');
+    document.getElementById('activePassivesDisplay').textContent = `Active: ${activeNames}`;
+  };
+
+  const activatePassiveSkill = async () => {
+    const skillId = document.getElementById('passiveSkillSelect').value;
+    if (!skillId || !state.currentFight) {
+      logError('Select a passive skill first');
+      return;
+    }
+    const result = await fetch(`/api/fights/${state.currentFight.id}/passive-skill/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ SkillId: parseInt(skillId) })
+    });
+    if (!result.ok) {
+      const error = await result.json();
+      logError(`Failed to activate passive: ${error.message}`);
+      return;
+    }
+    const fight = await result.json();
+    state.currentFight = fight;
+    const skillName = state.currentCharacter.skills.find(s => s.id == skillId)?.name || 'Unknown';
+    logSystem(`✨ Activated passive skill: ${skillName}`);
+    updateActivePassivesDisplay();
+  };
+
+  const deactivatePassiveSkill = async () => {
+    const skillId = document.getElementById('passiveSkillSelect').value;
+    if (!skillId || !state.currentFight) {
+      logError('Select a passive skill first');
+      return;
+    }
+    const result = await fetch(`/api/fights/${state.currentFight.id}/passive-skill/deactivate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ SkillId: parseInt(skillId) })
+    });
+    if (!result.ok) {
+      logError('Failed to deactivate passive');
+      return;
+    }
+    const fight = await result.json();
+    state.currentFight = fight;
+    const skillName = state.currentCharacter.skills.find(s => s.id == skillId)?.name || 'Unknown';
+    logSystem(`❌ Deactivated passive skill: ${skillName}`);
+    updateActivePassivesDisplay();
   };
 
   // Event listeners
@@ -217,7 +324,11 @@
   document.getElementById('characterSelect').addEventListener('change', (e) => {
     const pid = document.getElementById('playerSelect').value;
     const cid = e.target.value;
+    localStorage.setItem('selectedCharacterId', cid);
     loadSkills(pid, cid);
+  });
+  document.getElementById('playerSelect').addEventListener('change', (e) => {
+    localStorage.setItem('selectedPlayerId', e.target.value);
   });
   document.getElementById('startFight').addEventListener('click', startFight);
   document.getElementById('attackButton').addEventListener('click', async () => {
@@ -250,6 +361,9 @@
         }
       });
     }
+
+    state.currentFight = response;
+    updateActivePassivesDisplay();
     
     // Check for victory/defeat
     if (response.status === 'Completed') {
@@ -276,9 +390,13 @@
   });
   document.getElementById('clearLogButton').addEventListener('click', clearBattleLog);
 
+  document.getElementById('activatePassiveButton').addEventListener('click', activatePassiveSkill);
+  document.getElementById('deactivatePassiveButton').addEventListener('click', deactivatePassiveSkill);
+
   // Init
   loadPlayers();
   loadEnemies();
+  loadSavedCharacter();
 </script>
 </body>
 </html>

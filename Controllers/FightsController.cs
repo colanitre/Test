@@ -158,6 +158,65 @@ public class FightsController : ControllerBase
         return Ok(await BuildSummaryDto(id));
     }
 
+    [HttpPost("{id}/passive-skill/activate")]
+    public async Task<ActionResult<FightSummaryDto>> ActivatePassiveSkill(Guid id, [FromBody] ActivatePassiveSkillDto dto)
+    {
+        var session = await _context.FightSessions
+            .Include(fs => fs.Moves)
+            .FirstOrDefaultAsync(fs => fs.Id == id);
+        if (session == null)
+            return NotFound(new { message = "Fight session not found" });
+
+        if (session.Status != FightStatus.InProgress && session.Status != FightStatus.Waiting)
+            return BadRequest(new { message = "Fight is not currently active" });
+
+        var character = await _context.Characters
+            .Include(c => c.Skills)
+            .FirstOrDefaultAsync(c => c.Id == session.CharacterId);
+        if (character == null)
+            return NotFound(new { message = "Character not found" });
+
+        var skill = character.Skills.FirstOrDefault(s => s.Id == dto.SkillId);
+        if (skill == null)
+            return BadRequest(new { message = "Invalid skill" });
+
+        if (skill.Type != SkillType.Passive)
+            return BadRequest(new { message = "Skill must be passive to activate" });
+
+        if (character.Level < skill.RequiredLevel)
+            return BadRequest(new { message = $"Character must be level {skill.RequiredLevel} or higher" });
+
+        var activePassives = session.GetCharacterActivePassiveSkills();
+        if (!activePassives.Contains(skill.Id))
+        {
+            activePassives.Add(skill.Id);
+            session.SetCharacterActivePassiveSkills(activePassives);
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok(await BuildSummaryDto(session.Id));
+    }
+
+    [HttpPost("{id}/passive-skill/deactivate")]
+    public async Task<ActionResult<FightSummaryDto>> DeactivatePassiveSkill(Guid id, [FromBody] DeactivatePassiveSkillDto dto)
+    {
+        var session = await _context.FightSessions
+            .Include(fs => fs.Moves)
+            .FirstOrDefaultAsync(fs => fs.Id == id);
+        if (session == null)
+            return NotFound(new { message = "Fight session not found" });
+
+        var activePassives = session.GetCharacterActivePassiveSkills();
+        if (activePassives.Contains(dto.SkillId))
+        {
+            activePassives.Remove(dto.SkillId);
+            session.SetCharacterActivePassiveSkills(activePassives);
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok(await BuildSummaryDto(session.Id));
+    }
+
     [HttpGet("curve")]
     public ActionResult<DamageCurveConfig> GetDamageCurveConfig()
     {
@@ -231,6 +290,9 @@ public class FightsController : ControllerBase
         var playerSkill = character.Skills.FirstOrDefault(s => s.Id == dto.SkillId);
         if (playerSkill == null)
             return BadRequest(new { message = "Invalid skill" });
+
+        if (character.Level < playerSkill.RequiredLevel)
+            return BadRequest(new { message = $"Character must be level {playerSkill.RequiredLevel} or higher to use {playerSkill.Name}" });
 
         if (!characterCooldowns.TryGetValue(playerSkill.Id, out var cd) || cd > 0)
             return BadRequest(new { message = "Skill is on cooldown" });
@@ -338,6 +400,48 @@ public class FightsController : ControllerBase
         session.SetCharacterCooldowns(characterCooldowns);
         session.SetEnemyCooldowns(enemyCooldowns);
 
+        // Apply passive skill resource consumption
+        var characterActivePassives = session.GetCharacterActivePassiveSkills();
+        var passivesToRemove = new List<int>();
+        foreach (var passiveSkillId in characterActivePassives)
+        {
+            var passiveSkill = character.Skills.FirstOrDefault(s => s.Id == passiveSkillId);
+            if (passiveSkill != null)
+            {
+                // Check if character has enough resources to maintain the passive
+                bool canMaintain = true;
+                if (passiveSkill.ManaCost > 0 && session.CharacterCurrentMana < passiveSkill.ManaCost)
+                    canMaintain = false;
+                if (passiveSkill.StaminaCost > 0 && session.CharacterCurrentStamina < passiveSkill.StaminaCost)
+                    canMaintain = false;
+
+                if (!canMaintain)
+                {
+                    passivesToRemove.Add(passiveSkillId);
+                }
+                else
+                {
+                    // Consume resources for passive skill
+                    session.CharacterCurrentMana -= passiveSkill.ManaCost;
+                    session.CharacterCurrentStamina -= passiveSkill.StaminaCost;
+                }
+            }
+        }
+        // Remove passives that couldn't be maintained
+        foreach (var skillId in passivesToRemove)
+        {
+            characterActivePassives.Remove(skillId);
+        }
+        session.SetCharacterActivePassiveSkills(characterActivePassives);
+
+        // Apply regeneration to both character and enemy
+        session.CharacterCurrentHp = Math.Min(session.CharacterCurrentHp + session.CharacterHealthRegen, session.CharacterMaxHp);
+        session.CharacterCurrentMana = Math.Min(session.CharacterCurrentMana + session.CharacterManaRegen, session.CharacterMaxMana);
+        session.CharacterCurrentStamina = Math.Min(session.CharacterCurrentStamina + session.CharacterStaminaRegen, session.CharacterMaxStamina);
+        session.EnemyCurrentHp = Math.Min(session.EnemyCurrentHp + session.EnemyHealthRegen, session.EnemyMaxHp);
+        session.EnemyCurrentMana = Math.Min(session.EnemyCurrentMana + session.EnemyManaRegen, session.EnemyMaxMana);
+        session.EnemyCurrentStamina = Math.Min(session.EnemyCurrentStamina + session.EnemyStaminaRegen, session.EnemyMaxStamina);
+
         await _context.SaveChangesAsync();
         return Ok(await BuildSummaryDto(session.Id));
     }
@@ -363,8 +467,11 @@ public class FightsController : ControllerBase
             character.Level += 1;
 
             // Improve base stats on level-up
+            character.MaxHealth += 10;
             character.Health += 10;
+            character.MaxMana += 5;
             character.Mana += 5;
+            character.MaxStamina += 5;
             character.Stamina += 5;
             character.Attack += 2;
             character.Defense += 2;
@@ -394,6 +501,20 @@ public class FightsController : ControllerBase
             EnemyCurrentHp = enemy.Health,
             CharacterMaxHp = character.Health,
             EnemyMaxHp = enemy.Health,
+            CharacterCurrentMana = character.Mana,
+            EnemyCurrentMana = enemy.Mana,
+            CharacterMaxMana = character.Mana,
+            EnemyMaxMana = enemy.Mana,
+            CharacterCurrentStamina = character.Stamina,
+            EnemyCurrentStamina = enemy.Stamina,
+            CharacterMaxStamina = character.Stamina,
+            EnemyMaxStamina = enemy.Stamina,
+            CharacterHealthRegen = character.HealthRegen,
+            CharacterManaRegen = character.ManaRegen,
+            CharacterStaminaRegen = character.StaminaRegen,
+            EnemyHealthRegen = enemy.HealthRegen,
+            EnemyManaRegen = enemy.ManaRegen,
+            EnemyStaminaRegen = enemy.StaminaRegen,
             CharacterAttack = character.Attack,
             CharacterDefense = character.Defense,
             EnemyAttack = enemy.Attack,
@@ -429,18 +550,35 @@ public class FightsController : ControllerBase
             session.EnemyName,
             session.CharacterCurrentHp,
             session.CharacterMaxHp,
+            session.CharacterCurrentMana,
+            session.CharacterMaxMana,
+            session.CharacterCurrentStamina,
+            session.CharacterMaxStamina,
+            session.CharacterHealthRegen,
+            session.CharacterManaRegen,
+            session.CharacterStaminaRegen,
             session.EnemyCurrentHp,
             session.EnemyMaxHp,
+            session.EnemyCurrentMana,
+            session.EnemyMaxMana,
+            session.EnemyCurrentStamina,
+            session.EnemyMaxStamina,
+            session.EnemyHealthRegen,
+            session.EnemyManaRegen,
+            session.EnemyStaminaRegen,
             session.CharacterAttack,
             session.CharacterDefense,
             session.EnemyAttack,
             session.EnemyDefense,
+            session.CharacterLevel,
+            session.EnemyLevel,
             session.IsVictory,
             session.Status,
             session.CurrentTurn,
             session.Moves.OrderBy(m => m.Turn).Select(m => new FightMoveDto(m.Turn, m.IsPlayer, m.SkillId, m.Damage, m.Description, m.Timestamp)).ToList(),
             session.CharacterCooldownJson,
-            session.EnemyCooldownJson);
+            session.EnemyCooldownJson,
+            session.GetCharacterActivePassiveSkills());
     }
 }
 
@@ -459,17 +597,38 @@ public record FightSummaryDto(
     string EnemyName,
     int CharacterCurrentHp,
     int CharacterMaxHp,
+    int CharacterCurrentMana,
+    int CharacterMaxMana,
+    int CharacterCurrentStamina,
+    int CharacterMaxStamina,
+    int CharacterHealthRegen,
+    int CharacterManaRegen,
+    int CharacterStaminaRegen,
     int EnemyCurrentHp,
     int EnemyMaxHp,
+    int EnemyCurrentMana,
+    int EnemyMaxMana,
+    int EnemyCurrentStamina,
+    int EnemyMaxStamina,
+    int EnemyHealthRegen,
+    int EnemyManaRegen,
+    int EnemyStaminaRegen,
     int CharacterAttack,
     int CharacterDefense,
     int EnemyAttack,
     int EnemyDefense,
+    int CharacterLevel,
+    int EnemyLevel,
     bool IsVictory,
     FightStatus Status,
     int CurrentTurn,
     List<FightMoveDto> Moves,
     string CharacterCooldownJson,
-    string EnemyCooldownJson);
+    string EnemyCooldownJson,
+    List<int> CharacterActivePassiveSkills);
 
 public record AvailableFightDto(Guid Id, string CharacterName, string EnemyName, int CurrentTurn);
+
+public record ActivatePassiveSkillDto(int SkillId);
+
+public record DeactivatePassiveSkillDto(int SkillId);

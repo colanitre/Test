@@ -14,6 +14,9 @@ public class Enemy
     public int MaxMana { get; set; }
     public int Stamina { get; set; }
     public int MaxStamina { get; set; }
+    public int HealthRegen { get; set; }
+    public int ManaRegen { get; set; }
+    public int StaminaRegen { get; set; }
     public int Attack { get; set; }
     public int Defense { get; set; }
     public int Speed { get; set; }
@@ -61,6 +64,9 @@ public class Enemy
         Mana = MaxMana;
         MaxStamina = (int)(enemyClass.BaseEndurance * enemyClass.BaseAgility * difficultyMultiplier);
         Stamina = MaxStamina;
+        HealthRegen = (int)(enemyClass.BaseEndurance * difficultyMultiplier / 5);
+        ManaRegen = (int)(enemyClass.BaseWisdom * difficultyMultiplier / 5);
+        StaminaRegen = (int)(enemyClass.BaseAgility * difficultyMultiplier / 5);
         Attack = (int)(enemyClass.BaseStrength * enemyClass.BaseAgility * difficultyMultiplier);
         Defense = (int)(enemyClass.BaseEndurance * enemyClass.BaseStrength * difficultyMultiplier);
         Speed = (int)(enemyClass.BaseAgility * 2 * difficultyMultiplier);
@@ -69,6 +75,13 @@ public class Enemy
         Skills = enemyClass.Skills?.ToList() ?? new List<Skill>();
         ExperienceReward = (int)(Level * 10 * difficultyMultiplier);
         Description = enemyClass.Description;
+    }
+
+    public void Regenerate()
+    {
+        Health = Math.Min(Health + HealthRegen, MaxHealth);
+        Mana = Math.Min(Mana + ManaRegen, MaxMana);
+        Stamina = Math.Min(Stamina + StaminaRegen, MaxStamina);
     }
 }
 
