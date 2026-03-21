@@ -15,6 +15,14 @@ public class Troll : EnemyClass
         BaseCharisma = 5;
         BaseEndurance = 18;
         BaseLuck = 5;
+        PhysicalResistance = 0.8;
+        FireResistance = 1.25;
+        IceResistance = 0.85;
+        LightningResistance = 1.0;
+        PoisonResistance = 0.85;
+        HolyResistance = 1.0;
+        ShadowResistance = 1.0;
+        ArcaneResistance = 1.1;
         Skills = new List<Skill>
         {
             new StarterStrike(),

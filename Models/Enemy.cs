@@ -54,6 +54,7 @@ public class Enemy
             EnemyType.Elite => 1.25,
             EnemyType.Boss => 1.5,
             EnemyType.Legendary => 2.0,
+            EnemyType.Godlike => 3.0,
             _ => 1.0
         };
 
@@ -93,5 +94,6 @@ public enum EnemyType
     Common,
     Elite,
     Boss,
-    Legendary
+    Legendary,
+    Godlike
 }

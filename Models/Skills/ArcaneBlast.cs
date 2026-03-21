@@ -16,5 +16,7 @@ public class ArcaneBlast : Skill
         DefensePower = 0;
         SpeedModifier = 2;
         MagicPower = 50;
+        Element = ElementType.Arcane;
+        ElementPowerMultiplier = 1.15;
     }
 }

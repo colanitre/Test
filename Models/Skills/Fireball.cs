@@ -13,9 +13,11 @@ public class Fireball : Skill
         RequiredWisdom = 10;
         Description = "A powerful fire-based spell." ?? string.Empty;
         Type = SkillType.Active;
-        AttackPower = 40;
+        AttackPower = 30;
         DefensePower = 5;
         SpeedModifier = 3;
         MagicPower = 50;
+        Element = ElementType.Fire;
+        ElementPowerMultiplier = 1.2;
     }
 }

@@ -17,5 +17,7 @@ public class HolyLight : Skill
         DefensePower = 10;
         SpeedModifier = 1;
         MagicPower = 55;
+        Element = ElementType.Holy;
+        ElementPowerMultiplier = 1.15;
     }
 }

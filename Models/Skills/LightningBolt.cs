@@ -17,5 +17,7 @@ public class LightningBolt : Skill
         DefensePower = 0;
         SpeedModifier = 3;
         MagicPower = 60;
+        Element = ElementType.Lightning;
+        ElementPowerMultiplier = 1.15;
     }
 }

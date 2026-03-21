@@ -15,5 +15,7 @@ public class ManaBarrier : Skill
         DefensePower = 20;
         SpeedModifier = -1;
         MagicPower = 10;
+        Element = ElementType.Arcane;
+        ElementPowerMultiplier = 1.0;
     }
 }

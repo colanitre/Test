@@ -15,6 +15,14 @@ public class Dragon : EnemyClass
         BaseCharisma = 12;
         BaseEndurance = 25;
         BaseLuck = 10;
+        PhysicalResistance = 0.85;
+        FireResistance = 0.6;
+        IceResistance = 1.35;
+        LightningResistance = 0.95;
+        PoisonResistance = 0.8;
+        HolyResistance = 1.0;
+        ShadowResistance = 0.9;
+        ArcaneResistance = 0.85;
         Skills = new List<Skill>
         {
             new StarterStrike(),

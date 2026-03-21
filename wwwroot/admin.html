@@ -34,6 +34,14 @@
     <h3>Enemies</h3>
     <div id="enemiesContainer"></div>
   </div>
+  <div class="box">
+    <h2>Tier Progression & God Enemies</h2>
+    <div class="muted" id="tierSummary">Loading progression data...</div>
+    <h3>Advanced Tier Classes</h3>
+    <div id="tierClassesContainer"></div>
+    <h3>Greek Gods & Other Godlike Enemies (Lv 1000+)</h3>
+    <div id="godEnemiesContainer"></div>
+  </div>
   <div class="box" id="status"></div>
 
 <script>
@@ -146,19 +154,113 @@
     `;
   };
 
+  const renderTierClasses = (classes) => {
+    const container = document.getElementById('tierClassesContainer');
+    if (!Array.isArray(classes) || classes.length === 0) {
+      container.innerHTML = '<div class="muted">No classes found.</div>';
+      return;
+    }
+
+    const advanced = classes
+      .filter(c => c.isAdvanced)
+      .sort((a, b) => (a.tier - b.tier) || (a.archetype || '').localeCompare(b.archetype || '') || (a.branch - b.branch) || (a.name || '').localeCompare(b.name || ''));
+
+    if (advanced.length === 0) {
+      container.innerHTML = '<div class="muted">No advanced classes found.</div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Archetype</th>
+            <th>Tier</th>
+            <th>Required Lv</th>
+            <th>Branch</th>
+            <th>Skills</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${advanced.map(c => `
+            <tr>
+              <td>${c.id}</td>
+              <td>${c.name}</td>
+              <td>${c.archetype}</td>
+              <td>${c.tier}</td>
+              <td>${c.requiredLevel}</td>
+              <td>${c.branch >= 0 ? c.branch + 1 : '-'}</td>
+              <td>${c.skillCount}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+
+  const renderGodEnemies = (enemies) => {
+    const container = document.getElementById('godEnemiesContainer');
+    if (!Array.isArray(enemies) || enemies.length === 0) {
+      container.innerHTML = '<div class="muted">No enemies found.</div>';
+      return;
+    }
+
+    const godlikes = enemies
+      .filter(e => e.type === 'Godlike' || e.level >= 1000)
+      .sort((a, b) => b.level - a.level);
+
+    if (godlikes.length === 0) {
+      container.innerHTML = '<div class="muted">No godlike enemies (Lv 1000+) found.</div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Type</th>
+            <th>Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${godlikes.map(e => `
+            <tr>
+              <td>${e.id}</td>
+              <td>${e.name}</td>
+              <td>${e.enemyClass?.name || '-'}</td>
+              <td>${e.type}</td>
+              <td>${e.level}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+
   const refreshData = async () => {
-    const [players, enemies] = await Promise.all([
+    const [players, enemies, classes] = await Promise.all([
       fetchJson('/api/players'),
-      fetchJson('/api/enemies')
+      fetchJson('/api/enemies'),
+      fetchJson('/api/classes')
     ]);
 
     renderPlayers(players);
     renderEnemies(enemies);
+    renderTierClasses(classes);
+    renderGodEnemies(enemies);
 
     const playerCount = Array.isArray(players) ? players.length : 0;
     const enemyCount = Array.isArray(enemies) ? enemies.length : 0;
+    const advancedClassCount = Array.isArray(classes) ? classes.filter(c => c.isAdvanced).length : 0;
+    const godEnemyCount = Array.isArray(enemies) ? enemies.filter(e => e.type === 'Godlike' || e.level >= 1000).length : 0;
     document.getElementById('dataSummary').textContent = `Players: ${playerCount} | Enemies: ${enemyCount}`;
-    log('Loaded players and enemies.');
+    document.getElementById('tierSummary').textContent = `Advanced classes: ${advancedClassCount} | Godlike/Lv1000+ enemies: ${godEnemyCount}`;
+    log('Loaded players, enemies, and tier progression data.');
   };
 
   const refreshCurve = async () => {

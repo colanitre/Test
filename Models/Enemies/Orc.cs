@@ -15,6 +15,14 @@ public class Orc : EnemyClass
         BaseCharisma = 3;
         BaseEndurance = 14;
         BaseLuck = 6;
+        PhysicalResistance = 0.85;
+        FireResistance = 1.0;
+        IceResistance = 1.05;
+        LightningResistance = 1.1;
+        PoisonResistance = 0.8;
+        HolyResistance = 1.0;
+        ShadowResistance = 1.05;
+        ArcaneResistance = 1.15;
         Skills = new List<Skill>
         {
             new StarterStrike(),

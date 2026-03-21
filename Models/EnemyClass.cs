@@ -17,6 +17,16 @@ public class EnemyClass
     public int BaseEndurance { get; set; } = 10;
     public int BaseLuck { get; set; } = 10;
 
+    // Elemental resistance multipliers (lower is stronger resistance, higher is weaker)
+    public double PhysicalResistance { get; set; } = 1.0;
+    public double FireResistance { get; set; } = 1.0;
+    public double IceResistance { get; set; } = 1.0;
+    public double LightningResistance { get; set; } = 1.0;
+    public double PoisonResistance { get; set; } = 1.0;
+    public double HolyResistance { get; set; } = 1.0;
+    public double ShadowResistance { get; set; } = 1.0;
+    public double ArcaneResistance { get; set; } = 1.0;
+
     // Navigation property
     public ICollection<Enemy> Enemies { get; set; } = [];
     public ICollection<Skill> Skills { get; set; } = [];

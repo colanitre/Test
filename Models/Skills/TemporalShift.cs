@@ -17,5 +17,7 @@ public class TemporalShift : Skill
         DefensePower = 30;
         SpeedModifier = 10;
         MagicPower = 70;
+        Element = ElementType.Arcane;
+        ElementPowerMultiplier = 1.2;
     }
 }

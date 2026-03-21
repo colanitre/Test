@@ -14,5 +14,7 @@ public class ArcaneSpark : Skill
         DefensePower = 0;
         SpeedModifier = 3;
         MagicPower = 15;
+        Element = ElementType.Arcane;
+        ElementPowerMultiplier = 1.05;
     }
 }

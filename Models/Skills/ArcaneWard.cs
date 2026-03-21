@@ -15,5 +15,7 @@ public class ArcaneWard : Skill
         DefensePower = 12;
         SpeedModifier = 0;
         MagicPower = 6;
+        Element = ElementType.Arcane;
+        ElementPowerMultiplier = 1.0;
     }
 }

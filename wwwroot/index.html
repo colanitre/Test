@@ -4,41 +4,232 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RPG Fight UI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 12px; }
-    .box { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.08); margin-bottom: 12px; }
-    .box-collapsible-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .box-collapsible-title { font-weight: bold; color: #333; }
-    .box-collapse-toggle { margin-top: 0; padding: 4px 8px; font-size: 12px; }
+    :root {
+      --bg-1: #f4ead3;
+      --bg-2: #e8dbc1;
+      --panel: #fffaf0;
+      --panel-border: #c7ad74;
+      --ink: #2f2214;
+      --muted: #5c4730;
+      --accent: #8f5e22;
+      --accent-2: #6d4313;
+      --success: #2f6c42;
+      --danger: #7e2f2f;
+      --warning: #7a6126;
+    }
+    body {
+      font-family: 'Cormorant Garamond', serif;
+      background: radial-gradient(circle at 20% 10%, #fff3db 0%, transparent 45%), linear-gradient(150deg, var(--bg-1), var(--bg-2));
+      color: var(--ink);
+      margin: 0;
+      padding: 14px;
+      min-height: 100vh;
+    }
+    .top-link {
+      display: inline-block;
+      margin: 6px 0 12px;
+      text-decoration: none;
+      color: var(--accent-2);
+      border-bottom: 1px dashed var(--accent-2);
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .box {
+      background: linear-gradient(180deg, #fffdf8, var(--panel));
+      border: 1px solid var(--panel-border);
+      padding: 14px;
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(72, 45, 13, 0.12);
+      margin-bottom: 12px;
+      animation: riseIn .35s ease-out;
+    }
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .box-collapsible-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(139, 95, 37, 0.25);
+      padding-bottom: 6px;
+    }
+    .box-collapsible-title {
+      font-family: 'Cinzel', serif;
+      letter-spacing: .4px;
+      font-weight: 700;
+      color: var(--accent-2);
+    }
+    .box-collapse-toggle {
+      margin-top: 0;
+      padding: 4px 10px;
+      font-size: 12px;
+    }
     .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    label { font-weight: bold; display: block; margin-bottom: 4px; }
-    select, input { width: 100%; padding: 8px; border: 1px solid #bbb; border-radius: 6px; }
-    button { margin-top: 8px; padding: 8px 12px; border:none; background:#007ACC; color:white; border-radius:5px; cursor:pointer; }
-    button:hover { background:#005A9C; }
+    label {
+      font-family: 'Cinzel', serif;
+      letter-spacing: .3px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      display: block;
+      margin-bottom: 5px;
+    }
+    select, input {
+      width: 100%;
+      padding: 9px;
+      border: 1px solid #b99a62;
+      border-radius: 8px;
+      background: #fff;
+      color: #2f2214;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 15px;
+    }
+    button {
+      margin-top: 8px;
+      padding: 8px 12px;
+      border: 1px solid #6c4518;
+      background: linear-gradient(180deg, #a5702f, #7f531e);
+      color: #fff5e4;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: 'Cinzel', serif;
+      letter-spacing: .4px;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    button:hover { background: linear-gradient(180deg, #b27c38, #8d5d25); }
     ul { margin: 0; padding-left: 18px; }
-    .status { margin-top: 10px; color:#333; }
-  </style>
-  <style>
+    .status { margin-top: 10px; color: var(--muted); font-size: 15px; }
+
     .log-message { margin-bottom: 4px; padding: 2px 4px; border-radius: 3px; }
-    .log-info { background: #e8f4fd; color: #333; }
-    .log-player { background: #d4edda; color: #155724; border-left: 3px solid #28a745; }
-    .log-enemy { background: #f8d7da; color: #721c24; border-left: 3px solid #dc3545; }
-    .log-system { background: #fff3cd; color: #856404; border-left: 3px solid #ffc107; }
-    .log-error { background: #f8d7da; color: #721c24; border-left: 3px solid #dc3545; font-weight: bold; }
-    .log-time { color: #666; font-size: 11px; }
+    .log-info { background: #efe6d5; color: #3c2c1c; }
+    .log-player { background: #dcefe2; color: #124628; border-left: 3px solid var(--success); }
+    .log-enemy { background: #f3dedd; color: #5f1f1f; border-left: 3px solid var(--danger); }
+    .log-system { background: #f2ead2; color: #6d5214; border-left: 3px solid var(--warning); }
+    .log-error { background: #f3dedd; color: #5f1f1f; border-left: 3px solid var(--danger); font-weight: bold; }
+    .log-time { color: #765d3f; font-size: 11px; }
     .log-content { font-weight: normal; }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
-    .stats-card { border: 1px solid #ddd; background: #fafafa; border-radius: 6px; padding: 10px; }
+    .stats-card { border: 1px solid #ccb385; background: #fffdf8; border-radius: 8px; padding: 10px; }
     .stats-card h4 { margin: 0 0 8px 0; }
     .stats-line { font-size: 13px; margin: 3px 0; }
     .skill-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
-    .skill-overview-card { border: 1px solid #dde3ea; border-radius: 6px; background: #fff; padding: 8px; }
+    .skill-overview-card { border: 1px solid #ccb385; border-radius: 8px; background: #fff; padding: 8px; }
     .skill-overview-card h5 { margin: 0 0 6px 0; font-size: 13px; }
     .skill-overview-item { font-size: 12px; margin-bottom: 4px; }
+    .fight-options {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .fight-options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px;
+      letter-spacing: 0;
+      font-weight: 600;
+    }
+    .fight-options input { width: auto; }
+    .panel-soft {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccb385;
+      background: #fffdf8;
+    }
+    .panel-soft h4 { margin: 0 0 8px 0; font-family: 'Cinzel', serif; }
+    .passive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .passive-actions { display: flex; align-items: flex-end; gap: 8px; }
+    .passive-actions button { flex: 1; }
+    #activePassivesDisplay {
+      margin-top: 8px;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid #d7c6a2;
+      border-radius: 6px;
+      min-height: 20px;
+      font-size: 12px;
+    }
+    #battleLog {
+      width: 100%;
+      height: 220px;
+      border: 1px solid #bda070;
+      border-radius: 8px;
+      padding: 8px;
+      overflow-y: auto;
+      background: #fffcf5;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+    .profile-character-card {
+      border: 1px solid #ccb385;
+      background: #fffdf9;
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+    .upgrade-panel {
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid #ccb385;
+      border-radius: 8px;
+      background: #fffaf0;
+    }
+    .upgrade-meta {
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #5a4a2a;
+    }
+    .upgrade-actions {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .upgrade-status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #7a5f2e;
+    }
+    .upgrade-preview {
+      margin-top: 8px;
+      border-top: 1px dashed #ccb385;
+      padding-top: 8px;
+      font-size: 13px;
+      color: #4c3f24;
+    }
+    .upgrade-preview-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .box { padding: 10px; }
+      button { width: 100%; }
+      .passive-actions { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
-  <a href="/admin.html" style="margin-top: 10px;">Admin</a>
+  <a href="/admin.html" class="top-link">Admin</a>
 
   <div class="box" id="setupBox">
     <div class="row">
@@ -56,6 +247,18 @@
       </div>
     </div>
     <div class="status" id="setupStatus">Loading data...</div>
+    <div id="classUpgradePanel" class="upgrade-panel" style="display:none;">
+      <div class="upgrade-meta" id="classTierInfo">Current class tier: -</div>
+      <div class="upgrade-actions">
+        <div>
+          <label for="classUpgradeSelect">Available Class Upgrades</label>
+          <select id="classUpgradeSelect"></select>
+        </div>
+        <button id="applyClassUpgradeButton" type="button">Apply Class Upgrade</button>
+      </div>
+      <div class="upgrade-status" id="classUpgradeStatus">Select a character to see upgrade options.</div>
+      <div class="upgrade-preview" id="classUpgradePreview">Select an upgrade to preview stats and skills.</div>
+    </div>
     <button id="startFight">Start Fight</button>
   </div>
 
@@ -83,24 +286,26 @@
     <button id="clearLogButton">Clear Log</button>
     <button id="startNextFightButton" style="display:none;">Start Next Fight</button>
 
-    <div style="margin-top: 8px; font-size: 13px; color: #333;">
-      <label style="display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; font-weight: normal;">
-        <input type="checkbox" id="autoStartNextFight" checked style="width:auto;" />
+    <div class="fight-options">
+      <label>
+        <input type="checkbox" id="autoStartNextFight" checked />
         Auto-start next fight
       </label>
-      <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal;">
-        <input type="checkbox" id="autoRandomEnemy" checked style="width:auto;" />
+      <label>
+        <input type="checkbox" id="autoRandomEnemy" checked />
         Pick random enemy for next fight
       </label>
     </div>
 
-    <div style="margin-top: 10px; padding: 10px; background: #f8fbff; border: 1px solid #d8e9fb; border-radius: 6px;">
-      <h4 style="margin: 0 0 8px 0;">Selected Skill Details</h4>
-      <div id="skillDetails" style="font-size: 13px; color: #333;">Select a skill to see details.</div>
+    <div id="battleLog"></div>
+
+    <div class="panel-soft">
+      <h4>Selected Skill Details</h4>
+      <div id="skillDetails">Select a skill to see details.</div>
     </div>
 
-    <div id="skillsOverviewBox" style="margin-top: 10px; padding: 10px; background: #fbfbfb; border: 1px solid #ececec; border-radius: 6px;">
-      <div id="skillsOverview" style="font-size: 13px; color: #333;">Choose a character to view available skills.</div>
+    <div id="skillsOverviewBox" class="panel-soft">
+      <div id="skillsOverview">Choose a character to view available skills.</div>
     </div>
 
     <div class="stats-grid" id="fightStats" style="display:none;">
@@ -113,6 +318,7 @@
         <div class="stats-line"><strong>Stamina:</strong> <span id="charStatsStamina">-</span></div>
         <div class="stats-line"><strong>Attack/Defense:</strong> <span id="charStatsAtkDef">-</span></div>
         <div class="stats-line"><strong>Regen:</strong> <span id="charStatsRegen">-</span></div>
+        <div class="stats-line"><strong>Resistances:</strong> <span id="charStatsRes">-</span></div>
       </div>
       <div class="stats-card">
         <h4>Enemy Stats</h4>
@@ -123,29 +329,29 @@
         <div class="stats-line"><strong>Stamina:</strong> <span id="enemyStatsStamina">-</span></div>
         <div class="stats-line"><strong>Attack/Defense:</strong> <span id="enemyStatsAtkDef">-</span></div>
         <div class="stats-line"><strong>Regen:</strong> <span id="enemyStatsRegen">-</span></div>
+        <div class="stats-line"><strong>Resistances:</strong> <span id="enemyStatsRes">-</span></div>
       </div>
     </div>
     
-    <div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
-      <h4 style="margin-top: 0;">Passive Skills</h4>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;">
+    <div class="panel-soft" style="margin-top: 12px;">
+      <h4>Passive Skills</h4>
+      <div class="passive-grid">
         <div>
           <label for="passiveSkillSelect">Select Passive Skill</label>
           <select id="passiveSkillSelect"></select>
         </div>
-        <div style="display: flex; align-items: flex-end; gap: 8px;">
-          <button id="activatePassiveButton" style="flex: 1;">Activate</button>
-          <button id="deactivatePassiveButton" style="flex: 1;">Deactivate</button>
+        <div class="passive-actions">
+          <button id="activatePassiveButton">Activate</button>
+          <button id="deactivatePassiveButton">Deactivate</button>
         </div>
       </div>
-      <div id="activePassivesDisplay" style="margin-top: 8px; padding: 8px; background: white; border-radius: 3px; min-height: 20px; font-size: 12px;">Active: None</div>
+      <div id="activePassivesDisplay">Active: None</div>
     </div>
     
-    <div id="battleLog" style="width: 100%; height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 8px; overflow-y: auto; background: #f9f9f9; font-family: monospace; font-size: 12px; line-height: 1.4; margin-top: 12px;"></div>
   </div>
 
 <script>
-  const state = { players: [], enemies: [], currentCharacter: null, currentFight: null, lastLoggedMoveCount: 0 };
+  const state = { players: [], enemies: [], currentCharacter: null, currentFight: null, lastLoggedMoveCount: 0, currentUpgradeOptions: [] };
   const getSavedSkillKey = (characterId) => `selectedSkillId_${characterId}`;
   const getSavedPassiveSkillKey = (characterId) => `selectedPassiveSkillId_${characterId}`;
 
@@ -240,6 +446,7 @@
     state.enemies = enemies;
     const select = document.getElementById('enemySelect');
     select.innerHTML = '<option value="">Select enemy</option>' + enemies.map(e => `<option value="${e.id}">${e.name} (${e.type}, Lv${e.level})</option>`).join('');
+    renderResistanceStats();
   };
 
   const loadPlayerProfile = async (playerId) => {
@@ -256,7 +463,7 @@
     document.getElementById('profileEmail').textContent = player.email;
     const charsDiv = document.getElementById('profileCharacters');
     charsDiv.innerHTML = player.characters.map(c => `
-      <div style="border: 1px solid #ccc; padding: 8px; margin-bottom: 8px; border-radius: 4px;">
+      <div class="profile-character-card">
         <strong>${c.name}</strong> (Level ${c.level}) - ${c.class}<br>
         Health: ${c.health}, Mana: ${c.mana}, Experience: ${c.experience}<br>
         ${c.description || 'No description'}
@@ -268,6 +475,7 @@
   const loadCharacters = async (playerId, preferredCharacterId = null, triggerChange = false) => {
     if (!playerId) {
       document.getElementById('characterSelect').innerHTML = '<option value="">Select player first</option>';
+      document.getElementById('classUpgradePanel').style.display = 'none';
       return;
     }
     const chars = await fetchJson(`/api/players/${playerId}/characters`);
@@ -315,6 +523,23 @@
     document.getElementById('enemyStatsStamina').textContent = `${fight.enemyCurrentStamina} / ${fight.enemyMaxStamina}`;
     document.getElementById('enemyStatsAtkDef').textContent = `${fight.enemyAttack} / ${fight.enemyDefense}`;
     document.getElementById('enemyStatsRegen').textContent = `HP +${fight.enemyHealthRegen}, Mana +${fight.enemyManaRegen}, Stamina +${fight.enemyStaminaRegen}`;
+    renderResistanceStats();
+  };
+
+  const formatResistances = (res) => {
+    if (!res) return '-';
+    return `PHY ${Number(res.physicalResistance ?? 1).toFixed(2)} | FIR ${Number(res.fireResistance ?? 1).toFixed(2)} | ICE ${Number(res.iceResistance ?? 1).toFixed(2)} | LGT ${Number(res.lightningResistance ?? 1).toFixed(2)} | PSN ${Number(res.poisonResistance ?? 1).toFixed(2)} | HLY ${Number(res.holyResistance ?? 1).toFixed(2)} | SHD ${Number(res.shadowResistance ?? 1).toFixed(2)} | ARC ${Number(res.arcaneResistance ?? 1).toFixed(2)}`;
+  };
+
+  const renderResistanceStats = () => {
+    const charResEl = document.getElementById('charStatsRes');
+    const enemyResEl = document.getElementById('enemyStatsRes');
+
+    charResEl.textContent = state.currentCharacter?.class ? formatResistances(state.currentCharacter.class) : '-';
+
+    const selectedEnemyId = document.getElementById('enemySelect').value;
+    const selectedEnemy = state.enemies.find(e => String(e.id) === String(selectedEnemyId));
+    enemyResEl.textContent = selectedEnemy?.enemyClass ? formatResistances(selectedEnemy.enemyClass) : '-';
   };
 
   const renderSkillDetails = (skillId, source = 'active') => {
@@ -338,6 +563,7 @@
     const section = source === 'passive' ? 'Passive' : 'Active';
     details.innerHTML = `
       <div><strong>${section}:</strong> ${skill.name} (${skill.type})</div>
+      <div><strong>Element:</strong> ${skill.element || 'Physical'} | <strong>Element power:</strong> x${Number(skill.elementPowerMultiplier ?? 1).toFixed(2)}</div>
       <div><strong>Description:</strong> ${skill.description || 'No description'}</div>
       <div><strong>Required level:</strong> ${skill.requiredLevel} | <strong>Cooldown:</strong> ${skill.cooldown}</div>
       <div><strong>Mana cost:</strong> ${skill.manaCost} | <strong>Stamina cost:</strong> ${skill.staminaCost}</div>
@@ -356,11 +582,11 @@
     const passiveSkills = usableSkills.filter(s => s.type === 'Passive');
 
     const activeHtml = activeSkills.length > 0
-      ? activeSkills.map(s => `<div class="skill-overview-item"><strong>${s.name}</strong> (Lv ${s.requiredLevel}) - MP ${s.manaCost}, SP ${s.staminaCost}, CD ${s.cooldown}, ATK ${s.attackPower}, DEF ${s.defensePower}, SPD ${s.speedModifier}, MAG ${s.magicPower}</div>`).join('')
+      ? activeSkills.map(s => `<div class="skill-overview-item"><strong>${s.name}</strong> [${s.element || 'Physical'}] (Lv ${s.requiredLevel}) - MP ${s.manaCost}, SP ${s.staminaCost}, CD ${s.cooldown}, ELM x${Number(s.elementPowerMultiplier ?? 1).toFixed(2)}, ATK ${s.attackPower}, DEF ${s.defensePower}, SPD ${s.speedModifier}, MAG ${s.magicPower}</div>`).join('')
       : '<div class="skill-overview-item">None</div>';
 
     const passiveHtml = passiveSkills.length > 0
-      ? passiveSkills.map(s => `<div class="skill-overview-item"><strong>${s.name}</strong> (Lv ${s.requiredLevel}) - MP ${s.manaCost}, SP ${s.staminaCost}, CD ${s.cooldown}, ATK ${s.attackPower}, DEF ${s.defensePower}, SPD ${s.speedModifier}, MAG ${s.magicPower}</div>`).join('')
+      ? passiveSkills.map(s => `<div class="skill-overview-item"><strong>${s.name}</strong> [${s.element || 'Physical'}] (Lv ${s.requiredLevel}) - MP ${s.manaCost}, SP ${s.staminaCost}, CD ${s.cooldown}, ELM x${Number(s.elementPowerMultiplier ?? 1).toFixed(2)}, ATK ${s.attackPower}, DEF ${s.defensePower}, SPD ${s.speedModifier}, MAG ${s.magicPower}</div>`).join('')
       : '<div class="skill-overview-item">None</div>';
 
     overview.innerHTML = `
@@ -426,6 +652,130 @@
     renderSkillsOverview(usableSkills);
 
     renderSkillDetails(skillSelect.value, 'active');
+    renderResistanceStats();
+  };
+
+  const tierLabel = (tier) => {
+    const labels = ['Base', 'Mythical', 'Legendary', 'Divine', 'Deific'];
+    return labels[tier] || `Tier ${tier}`;
+  };
+
+  const loadClassUpgrades = async (playerId, characterId) => {
+    const panel = document.getElementById('classUpgradePanel');
+    const select = document.getElementById('classUpgradeSelect');
+    const status = document.getElementById('classUpgradeStatus');
+    const preview = document.getElementById('classUpgradePreview');
+    const tierInfo = document.getElementById('classTierInfo');
+
+    if (!playerId || !characterId || !state.currentCharacter) {
+      panel.style.display = 'none';
+      return;
+    }
+
+    panel.style.display = 'block';
+
+    const currentClass = state.currentCharacter.class;
+    if (currentClass) {
+      const lockInfo = state.currentCharacter.advancedPath === null || state.currentCharacter.advancedPath === undefined
+        ? 'Path lock: not chosen yet.'
+        : `Path lock: Branch ${state.currentCharacter.advancedPath + 1}.`;
+      tierInfo.textContent = `Current class: ${currentClass.name} (${tierLabel(currentClass.tier)}), Character level: ${state.currentCharacter.level}. ${lockInfo}`;
+    } else {
+      tierInfo.textContent = `Character level: ${state.currentCharacter.level}`;
+    }
+
+    const upgrades = await fetchJson(`/api/players/${playerId}/characters/${characterId}/class-upgrades`);
+    if (!Array.isArray(upgrades)) {
+      select.innerHTML = '<option value="">Unavailable</option>';
+      status.textContent = 'Could not load class upgrades.';
+      preview.textContent = 'Upgrade preview unavailable.';
+      return;
+    }
+
+    state.currentUpgradeOptions = upgrades;
+
+    if (upgrades.length === 0) {
+      select.innerHTML = '<option value="">No upgrades available</option>';
+      status.textContent = 'No eligible next-tier classes yet. Level up to unlock tier upgrades.';
+      preview.textContent = 'No class preview available.';
+      return;
+    }
+
+    select.innerHTML = '<option value="">Choose upgrade</option>' + upgrades.map(u =>
+      `<option value="${u.name}">${u.name} (${tierLabel(u.tier)}, requires Lv${u.requiredLevel})</option>`
+    ).join('');
+    status.textContent = `${upgrades.length} upgrade option(s) available.`;
+    preview.textContent = 'Select an upgrade to preview stats and skills.';
+  };
+
+  const renderUpgradePreview = () => {
+    const select = document.getElementById('classUpgradeSelect');
+    const preview = document.getElementById('classUpgradePreview');
+    const selectedName = select.value;
+
+    if (!selectedName) {
+      preview.textContent = 'Select an upgrade to preview stats and skills.';
+      return;
+    }
+
+    const option = state.currentUpgradeOptions.find(u => u.name === selectedName);
+    if (!option) {
+      preview.textContent = 'No preview data found for that upgrade.';
+      return;
+    }
+
+    const currentClass = state.currentCharacter?.class;
+    const currentStats = currentClass || {};
+    const statDelta = (key, value) => {
+      const current = Number(currentStats[key] ?? 0);
+      const delta = Number(value) - current;
+      const prefix = delta >= 0 ? '+' : '';
+      return `${value} (${prefix}${delta})`;
+    };
+
+    const skills = Array.isArray(option.skills) ? option.skills : [];
+    const skillLines = skills.length === 0
+      ? '<div>No skills listed.</div>'
+      : skills.map(s => `<div>${s.name} [${s.type}] Lv${s.requiredLevel} | ELM ${s.element} x${Number(s.elementPowerMultiplier ?? 1).toFixed(2)} | ATK ${s.attackPower}, DEF ${s.defensePower}, SPD ${s.speedModifier}, MAG ${s.magicPower}</div>`).join('');
+
+    preview.innerHTML = `
+      <div class="upgrade-preview-title">Preview: ${option.name} (${tierLabel(option.tier)})</div>
+      <div>STR ${statDelta('baseStrength', option.baseStrength)} | AGI ${statDelta('baseAgility', option.baseAgility)} | INT ${statDelta('baseIntelligence', option.baseIntelligence)}</div>
+      <div>WIS ${statDelta('baseWisdom', option.baseWisdom)} | CHA ${statDelta('baseCharisma', option.baseCharisma)} | END ${statDelta('baseEndurance', option.baseEndurance)} | LUCK ${statDelta('baseLuck', option.baseLuck)}</div>
+      <div style="margin-top:6px;"><strong>Tier Skills</strong></div>
+      ${skillLines}
+    `;
+  };
+
+  const applyClassUpgrade = async () => {
+    const playerId = document.getElementById('playerSelect').value;
+    const characterId = document.getElementById('characterSelect').value;
+    const className = document.getElementById('classUpgradeSelect').value;
+    const status = document.getElementById('classUpgradeStatus');
+
+    if (!playerId || !characterId || !className) {
+      status.textContent = 'Pick a class upgrade first.';
+      return;
+    }
+
+    const result = await fetch(`/api/players/${playerId}/characters/${characterId}/class-upgrade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ className })
+    });
+
+    if (!result.ok) {
+      const error = await result.json().catch(() => null);
+      status.textContent = error?.message || 'Upgrade failed.';
+      return;
+    }
+
+    const upgradedCharacter = await result.json();
+    status.textContent = `Upgraded to ${upgradedCharacter.class?.name || className}.`;
+    logSystem(`Class upgraded to ${upgradedCharacter.class?.name || className}`);
+
+    await loadCharacters(playerId, characterId, true);
+    await loadPlayerProfile(playerId);
   };
 
   const startFight = async () => {
@@ -600,7 +950,7 @@
     const pid = document.getElementById('playerSelect').value;
     const cid = e.target.value;
     localStorage.setItem('selectedCharacterId', cid);
-    loadSkills(pid, cid);
+    loadSkills(pid, cid).then(() => loadClassUpgrades(pid, cid));
   });
   document.getElementById('skillSelect').addEventListener('change', (e) => {
     const characterId = document.getElementById('characterSelect').value;
@@ -687,6 +1037,9 @@
   document.getElementById('activatePassiveButton').addEventListener('click', activatePassiveSkill);
   document.getElementById('deactivatePassiveButton').addEventListener('click', deactivatePassiveSkill);
   document.getElementById('startNextFightButton').addEventListener('click', startNextFight);
+  document.getElementById('enemySelect').addEventListener('change', renderResistanceStats);
+  document.getElementById('applyClassUpgradeButton').addEventListener('click', applyClassUpgrade);
+  document.getElementById('classUpgradeSelect').addEventListener('change', renderUpgradePreview);
 
   // Add collapsible controls to major UI boxes
   makeBoxCollapsible('setupBox', 'Fight Setup');

@@ -26,6 +26,7 @@ public class Character
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public int? AdvancedPath { get; set; }
 
     // Foreign key for Player
     public int PlayerId { get; set; }

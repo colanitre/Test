@@ -14,5 +14,7 @@ public class ShadowStab : Skill
         DefensePower = 4;
         SpeedModifier = 8;
         MagicPower = 0;
+        Element = ElementType.Shadow;
+        ElementPowerMultiplier = 1.15;
     }
 }

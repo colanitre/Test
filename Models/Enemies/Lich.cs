@@ -15,6 +15,14 @@ public class Lich : EnemyClass
         BaseCharisma = 12;
         BaseEndurance = 11;
         BaseLuck = 8;
+        PhysicalResistance = 0.95;
+        FireResistance = 1.15;
+        IceResistance = 0.8;
+        LightningResistance = 0.95;
+        PoisonResistance = 0.0;
+        HolyResistance = 1.35;
+        ShadowResistance = 0.5;
+        ArcaneResistance = 0.75;
         Skills = new List<Skill>
         {
             new StarterStrike(),

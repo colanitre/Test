@@ -17,5 +17,7 @@ public class VenomStrike : Skill
         DefensePower = 0;
         SpeedModifier = 5;
         MagicPower = 25;
+        Element = ElementType.Poison;
+        ElementPowerMultiplier = 1.15;
     }
 }

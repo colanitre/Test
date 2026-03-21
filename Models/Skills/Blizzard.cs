@@ -13,9 +13,11 @@ public class Blizzard : Skill
         RequiredWisdom = 12;
         Description = "Unleash a devastating blizzard that damages and slows enemies.";
         Type = SkillType.Active;
-        AttackPower = 25;
+            AttackPower = 20;
         DefensePower = 0;
-        SpeedModifier = 2;
-        MagicPower = 70;
+            SpeedModifier = -2;
+            MagicPower = 60;
+            Element = ElementType.Ice;
+            ElementPowerMultiplier = 1.2;
     }
 }

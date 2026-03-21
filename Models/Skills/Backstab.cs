@@ -17,5 +17,7 @@ public class Backstab : Skill
         DefensePower = 0;
         SpeedModifier = 6;
         MagicPower = 0;
+        Element = ElementType.Physical;
+        ElementPowerMultiplier = 1.05;
     }
 }

@@ -17,5 +17,7 @@ public class DeadlyPoison : Skill
         DefensePower = 0;
         SpeedModifier = 4;
         MagicPower = 20;
+        Element = ElementType.Poison;
+        ElementPowerMultiplier = 1.2;
     }
 }

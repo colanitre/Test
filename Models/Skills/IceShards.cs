@@ -13,9 +13,11 @@ public class IceShards : Skill
         RequiredWisdom = 8;
         Description = "Fire shards of ice at the enemy, dealing moderate magic damage.";
         Type = SkillType.Active;
-        AttackPower = 15;
+        AttackPower = 20;
         DefensePower = 0;
-        SpeedModifier = 2;
-        MagicPower = 45;
+        SpeedModifier = 3;
+        MagicPower = 40;
+        Element = ElementType.Ice;
+        ElementPowerMultiplier = 1.15;
     }
 }

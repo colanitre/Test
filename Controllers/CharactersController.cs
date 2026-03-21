@@ -67,6 +67,118 @@ public class CharactersController : ControllerBase
     }
 
     /// <summary>
+    /// Get available class upgrades for a character.
+    /// </summary>
+    [HttpGet("{id}/class-upgrades")]
+    public async Task<ActionResult<IEnumerable<ClassUpgradeOptionDto>>> GetClassUpgrades(int playerId, int id)
+    {
+        var character = await _context.Characters
+            .Include(c => c.Class)
+            .FirstOrDefaultAsync(c => c.Id == id && c.PlayerId == playerId);
+
+        if (character == null)
+            return NotFound(new { message = "Character not found" });
+
+        if (character.Class == null)
+            return BadRequest(new { message = "Character has no class" });
+
+        var archetype = character.Class.Archetype;
+        var nextTier = character.Class.Tier + 1;
+
+        var options = await _context.Classes
+            .Include(c => c.Skills)
+            .Where(c => c.Archetype == archetype && c.Tier == nextTier && c.RequiredLevel <= character.Level)
+            .Where(c => !character.AdvancedPath.HasValue || c.Branch == character.AdvancedPath.Value)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        return Ok(options.Select(c => new ClassUpgradeOptionDto(
+            c.Id,
+            c.Name,
+            c.Archetype,
+            c.Tier,
+            c.RequiredLevel,
+            c.IsAdvanced,
+            c.Branch,
+            c.BaseStrength,
+            c.BaseAgility,
+            c.BaseIntelligence,
+            c.BaseWisdom,
+            c.BaseCharisma,
+            c.BaseEndurance,
+            c.BaseLuck,
+            c.Skills
+                .OrderBy(s => s.RequiredLevel)
+                .ThenBy(s => s.Name)
+                .Select(s => new ClassUpgradeSkillDto(
+                    s.Id,
+                    s.Name,
+                    s.Type,
+                    s.RequiredLevel,
+                    s.ManaCost,
+                    s.StaminaCost,
+                    s.Cooldown,
+                    s.AttackPower,
+                    s.DefensePower,
+                    s.SpeedModifier,
+                    s.MagicPower,
+                    s.Element,
+                    s.ElementPowerMultiplier))
+                .ToList())));
+    }
+
+    /// <summary>
+    /// Upgrade a character to an advanced class for their archetype.
+    /// </summary>
+    [HttpPost("{id}/class-upgrade")]
+    public async Task<ActionResult<CharacterDetailDto>> UpgradeClass(int playerId, int id, [FromBody] UpgradeClassDto dto)
+    {
+        if (dto == null || string.IsNullOrWhiteSpace(dto.ClassName))
+            return BadRequest(new { message = "ClassName is required" });
+
+        var character = await _context.Characters
+            .Include(c => c.Class)
+            .Include(c => c.Skills)
+            .FirstOrDefaultAsync(c => c.Id == id && c.PlayerId == playerId);
+
+        if (character == null)
+            return NotFound(new { message = "Character not found" });
+
+        if (character.Class == null)
+            return BadRequest(new { message = "Character has no class" });
+
+        var targetClass = await _context.Classes
+            .Include(c => c.Skills)
+            .FirstOrDefaultAsync(c => c.Name == dto.ClassName);
+
+        if (targetClass == null)
+            return NotFound(new { message = "Target class not found" });
+
+        if (targetClass.Archetype != character.Class.Archetype)
+            return BadRequest(new { message = "Can only upgrade within the same archetype" });
+
+        if (targetClass.Tier != character.Class.Tier + 1)
+            return BadRequest(new { message = "Can only upgrade to the next tier" });
+
+        if (character.Level < targetClass.RequiredLevel)
+            return BadRequest(new { message = $"Character must be level {targetClass.RequiredLevel} to upgrade" });
+
+        if (character.AdvancedPath.HasValue && targetClass.Branch != character.AdvancedPath.Value)
+            return BadRequest(new { message = "Upgrade path is locked. You must continue with your chosen branch." });
+
+        if (!character.AdvancedPath.HasValue && targetClass.Tier > 0)
+            character.AdvancedPath = targetClass.Branch;
+
+        character.ClassId = targetClass.Id;
+        character.Class = targetClass;
+        character.Skills = targetClass.Skills.ToList();
+        character.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return Ok(ToDto(character));
+    }
+
+    /// <summary>
     /// Create a new character for a player
     /// </summary>
     [HttpPost]
@@ -179,13 +291,26 @@ public class CharactersController : ControllerBase
             character.Class != null ? new ClassDto(
                 character.Class.Id,
                 character.Class.Name,
+                character.Class.Archetype,
+                character.Class.Tier,
+                character.Class.RequiredLevel,
+                character.Class.IsAdvanced,
+                character.Class.Branch,
                 character.Class.BaseStrength,
                 character.Class.BaseAgility,
                 character.Class.BaseIntelligence,
                 character.Class.BaseWisdom,
                 character.Class.BaseCharisma,
                 character.Class.BaseEndurance,
-                character.Class.BaseLuck) : null,
+                character.Class.BaseLuck,
+                character.Class.PhysicalResistance,
+                character.Class.FireResistance,
+                character.Class.IceResistance,
+                character.Class.LightningResistance,
+                character.Class.PoisonResistance,
+                character.Class.HolyResistance,
+                character.Class.ShadowResistance,
+                character.Class.ArcaneResistance) : null,
             character.Level,
             character.Health,
             character.MaxHealth,
@@ -201,11 +326,14 @@ public class CharactersController : ControllerBase
             character.CreatedAt,
             character.UpdatedAt,
             character.PlayerId,
+            character.AdvancedPath,
             character.Skills.Select(s => new SkillDto(
                 s.Id,
                 s.Name,
                 s.Description,
                 s.Type,
+                s.Element,
+                s.ElementPowerMultiplier,
                 s.Level,
                 s.ManaCost,
                 s.StaminaCost,
@@ -236,24 +364,40 @@ public record CharacterDetailDto(
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     int PlayerId,
+    int? AdvancedPath,
     List<SkillDto> Skills);
 
 public record ClassDto(
     int Id,
     string Name,
+    string Archetype,
+    int Tier,
+    int RequiredLevel,
+    bool IsAdvanced,
+    int Branch,
     int BaseStrength,
     int BaseAgility,
     int BaseIntelligence,
     int BaseWisdom,
     int BaseCharisma,
     int BaseEndurance,
-    int BaseLuck);
+    int BaseLuck,
+    double PhysicalResistance,
+    double FireResistance,
+    double IceResistance,
+    double LightningResistance,
+    double PoisonResistance,
+    double HolyResistance,
+    double ShadowResistance,
+    double ArcaneResistance);
 
 public record SkillDto(
     int Id,
     string Name,
     string Description,
     SkillType Type,
+    ElementType Element,
+    double ElementPowerMultiplier,
     int Level,
     int ManaCost,
     int StaminaCost,
@@ -273,4 +417,38 @@ public record UpdateCharacterDto(
     string Name,
     string Class,
     string? Description);
+
+public record ClassUpgradeOptionDto(
+    int Id,
+    string Name,
+    string Archetype,
+    int Tier,
+    int RequiredLevel,
+    bool IsAdvanced,
+    int Branch,
+    int BaseStrength,
+    int BaseAgility,
+    int BaseIntelligence,
+    int BaseWisdom,
+    int BaseCharisma,
+    int BaseEndurance,
+    int BaseLuck,
+    List<ClassUpgradeSkillDto> Skills);
+
+public record ClassUpgradeSkillDto(
+    int Id,
+    string Name,
+    SkillType Type,
+    int RequiredLevel,
+    int ManaCost,
+    int StaminaCost,
+    int Cooldown,
+    int AttackPower,
+    int DefensePower,
+    int SpeedModifier,
+    int MagicPower,
+    ElementType Element,
+    double ElementPowerMultiplier);
+
+public record UpgradeClassDto(string ClassName);
 }

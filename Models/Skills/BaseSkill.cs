@@ -32,6 +32,8 @@ public class Skill
     public int DefensePower { get; set; } = 1;
     public int SpeedModifier { get; set; } = 1;
     public int MagicPower { get; set; } = 1;
+    public ElementType Element { get; set; } = ElementType.Physical;
+    public double ElementPowerMultiplier { get; set; } = 1.0;
 
     // Navigation properties
     public ICollection<Class> Classes { get; set; } = [];
@@ -43,4 +45,16 @@ public enum SkillType
     Active,
     Passive,
     Ultimate
+}
+
+public enum ElementType
+{
+    Physical,
+    Fire,
+    Ice,
+    Lightning,
+    Poison,
+    Holy,
+    Shadow,
+    Arcane
 }

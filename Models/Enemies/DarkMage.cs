@@ -15,6 +15,14 @@ public class DarkMage : EnemyClass
         BaseCharisma = 10;
         BaseEndurance = 8;
         BaseLuck = 7;
+        PhysicalResistance = 1.1;
+        FireResistance = 0.95;
+        IceResistance = 0.95;
+        LightningResistance = 0.9;
+        PoisonResistance = 1.05;
+        HolyResistance = 1.2;
+        ShadowResistance = 0.7;
+        ArcaneResistance = 0.8;
         Skills = new List<Skill>
         {
             new StarterStrike(),

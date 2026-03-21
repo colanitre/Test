@@ -17,5 +17,7 @@ public class ChainLightning : Skill
         DefensePower = 0;
         SpeedModifier = 4;
         MagicPower = 65;
+        Element = ElementType.Lightning;
+        ElementPowerMultiplier = 1.2;
     }
 }

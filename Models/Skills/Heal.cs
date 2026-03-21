@@ -17,5 +17,7 @@ public class Heal : Skill
         DefensePower = 20;
         SpeedModifier = 0;
         MagicPower = 50;
+        Element = ElementType.Holy;
+        ElementPowerMultiplier = 1.0;
     }
 }

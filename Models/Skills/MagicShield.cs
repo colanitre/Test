@@ -17,5 +17,7 @@ public class MagicShield : Skill
         DefensePower = 70;
         SpeedModifier = 0;
         MagicPower = 40;
+        Element = ElementType.Arcane;
+        ElementPowerMultiplier = 1.05;
     }
 }

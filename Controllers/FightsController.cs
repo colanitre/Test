@@ -272,12 +272,14 @@ public class FightsController : ControllerBase
 
         var character = await _context.Characters
             .Include(c => c.Skills)
+            .Include(c => c.Class)
             .FirstOrDefaultAsync(c => c.Id == session.CharacterId);
         if (character == null)
             return NotFound(new { message = "Character not found" });
 
         var enemy = await _context.Enemies
             .Include(e => e.Skills)
+            .Include(e => e.EnemyClass)
             .FirstOrDefaultAsync(e => e.Id == session.EnemyId);
         if (enemy == null)
             return NotFound(new { message = "Enemy not found" });
@@ -307,7 +309,12 @@ public class FightsController : ControllerBase
                         + enemy.Magic * _damageConfig.EnemyMagicDefenseWeight
                         + enemy.Stamina * _damageConfig.EnemyStaminaDefenseWeight;
 
-        var basePlDamage = Math.Max(_damageConfig.MinimumDamage, (int)Math.Floor(charPower + skillPower - charDefense));
+        var playerElementMultiplier = GetResistanceMultiplier(playerSkill.Element, enemy.EnemyClass);
+        var playerEffectiveSkillPower = skillPower * playerSkill.ElementPowerMultiplier;
+        var playerEffectiveness = DescribeElementEffect(playerElementMultiplier);
+
+        var basePlDamage = Math.Max(_damageConfig.MinimumDamage,
+            (int)Math.Floor((charPower + playerEffectiveSkillPower - charDefense) * playerElementMultiplier));
         var plDamage = (int)Math.Max(_damageConfig.MinimumDamage, Math.Floor(basePlDamage * (0.9 + random.NextDouble() * 0.2)));
         session.EnemyCurrentHp -= plDamage;
         session.Moves.Add(new FightMove
@@ -317,7 +324,7 @@ public class FightsController : ControllerBase
             IsPlayer = true,
             SkillId = playerSkill.Id,
             Damage = plDamage,
-            Description = $"Character uses {playerSkill.Name}; deals {plDamage} damage."
+            Description = $"Character uses {playerSkill.Name} [{playerSkill.Element}] ({playerEffectiveness}); deals {plDamage} damage."
         });
 
         characterCooldowns[playerSkill.Id] = playerSkill.Cooldown;
@@ -356,11 +363,14 @@ public class FightsController : ControllerBase
             var enemySkillPower = enemySkill.AttackPower * _damageConfig.SkillAttackWeight
                                 + enemySkill.MagicPower * _damageConfig.SkillMagicWeight
                                 + enemySkill.SpeedModifier * _damageConfig.SkillSpeedWeight;
+            var enemyElementMultiplier = GetResistanceMultiplier(enemySkill.Element, character.Class);
+            var enemyEffectiveSkillPower = enemySkillPower * enemySkill.ElementPowerMultiplier;
+            var enemyEffectiveness = DescribeElementEffect(enemyElementMultiplier);
             enemyCooldowns[enemySkill.Id] = enemySkill.Cooldown;
             var baseEnemyDamage = Math.Max(_damageConfig.MinimumDamage,
-                (int)Math.Floor(enemyPower + enemySkillPower - enemyDefense * 0.5));
+                (int)Math.Floor((enemyPower + enemyEffectiveSkillPower - enemyDefense * 0.5) * enemyElementMultiplier));
             enemyDamage = (int)Math.Max(_damageConfig.MinimumDamage, Math.Floor(baseEnemyDamage * (0.9 + random.NextDouble() * 0.2)));
-            enemyEvent = $"Enemy uses {enemySkill.Name}; deals {enemyDamage} damage.";
+            enemyEvent = $"Enemy uses {enemySkill.Name} [{enemySkill.Element}] ({enemyEffectiveness}); deals {enemyDamage} damage.";
         }
         else
         {
@@ -454,6 +464,53 @@ public class FightsController : ControllerBase
             if (cooldowns[key] > 0)
                 cooldowns[key] = Math.Max(0, cooldowns[key] - 1);
         }
+    }
+
+    private static double GetResistanceMultiplier(ElementType element, EnemyClass? defender)
+    {
+        if (defender == null)
+            return 1.0;
+
+        return element switch
+        {
+            ElementType.Physical => defender.PhysicalResistance,
+            ElementType.Fire => defender.FireResistance,
+            ElementType.Ice => defender.IceResistance,
+            ElementType.Lightning => defender.LightningResistance,
+            ElementType.Poison => defender.PoisonResistance,
+            ElementType.Holy => defender.HolyResistance,
+            ElementType.Shadow => defender.ShadowResistance,
+            ElementType.Arcane => defender.ArcaneResistance,
+            _ => 1.0
+        };
+    }
+
+    private static double GetResistanceMultiplier(ElementType element, Class? defender)
+    {
+        if (defender == null)
+            return 1.0;
+
+        return element switch
+        {
+            ElementType.Physical => defender.PhysicalResistance,
+            ElementType.Fire => defender.FireResistance,
+            ElementType.Ice => defender.IceResistance,
+            ElementType.Lightning => defender.LightningResistance,
+            ElementType.Poison => defender.PoisonResistance,
+            ElementType.Holy => defender.HolyResistance,
+            ElementType.Shadow => defender.ShadowResistance,
+            ElementType.Arcane => defender.ArcaneResistance,
+            _ => 1.0
+        };
+    }
+
+    private static string DescribeElementEffect(double multiplier)
+    {
+        if (multiplier >= 1.15)
+            return "Effective";
+        if (multiplier <= 0.85)
+            return "Resisted";
+        return "Normal";
     }
 
     private async Task GrantExperience(Character character, int reward)

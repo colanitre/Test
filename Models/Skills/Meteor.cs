@@ -17,5 +17,7 @@ public class Meteor : Skill
         DefensePower = 0;
         SpeedModifier = 1;
         MagicPower = 85;
+        Element = ElementType.Fire;
+        ElementPowerMultiplier = 1.25;
     }
 }

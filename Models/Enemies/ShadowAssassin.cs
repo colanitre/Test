@@ -15,6 +15,14 @@ public class ShadowAssassin : EnemyClass
         BaseCharisma = 6;
         BaseEndurance = 9;
         BaseLuck = 10;
+        PhysicalResistance = 0.95;
+        FireResistance = 1.1;
+        IceResistance = 1.0;
+        LightningResistance = 0.9;
+        PoisonResistance = 0.7;
+        HolyResistance = 1.2;
+        ShadowResistance = 0.6;
+        ArcaneResistance = 1.0;
         Skills = new List<Skill>
         {
             new StarterStrike(),
