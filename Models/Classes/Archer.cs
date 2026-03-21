@@ -12,6 +12,10 @@ public class Archer : Class
         BaseCharisma = 10;
         BaseEndurance = 8;
         BaseLuck = 12;
-        Skills = new List<Skill> { new Archery() }; // Initialize with the Archery skill
+        Skills = new List<Skill>
+        {
+            new Archery(),
+            new QuickShot()
+        };
     }
 }

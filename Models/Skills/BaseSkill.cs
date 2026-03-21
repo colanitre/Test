@@ -33,8 +33,9 @@ public class Skill
     public int SpeedModifier { get; set; } = 1;
     public int MagicPower { get; set; } = 1;
 
-    // Navigation property
+    // Navigation properties
     public ICollection<Class> Classes { get; set; } = [];
+    public ICollection<EnemyClass> EnemyClasses { get; set; } = [];
 }
 
 public enum SkillType

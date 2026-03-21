@@ -12,5 +12,10 @@ public class Rogue : Class
         BaseCharisma = 10;
         BaseEndurance = 8;
         BaseLuck = 15;
+        Skills = new List<Skill>
+        {
+            new ShadowStab(),
+            new Archery()
+        };
     }
 }

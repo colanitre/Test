@@ -3,7 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using RpgApi.Data;
 using RpgApi.Models;
 
-namespace RpgApi.Controllers;
+namespace RpgApi.Controllers
+{
 
 [ApiController]
 [Route("api/players/{playerId}/[controller]")]
@@ -37,6 +38,7 @@ public class CharactersController : ControllerBase
         var characters = await _context.Characters
             .Where(c => c.PlayerId == playerId)
             .Include(c => c.Class)
+            .Include(c => c.Skills)
             .ToListAsync();
 
         return Ok(characters.Select(ToDto));
@@ -52,6 +54,7 @@ public class CharactersController : ControllerBase
         
         var character = await _context.Characters
             .Include(c => c.Class)
+            .Include(c => c.Skills)
             .FirstOrDefaultAsync(c => c.Id == id && c.PlayerId == playerId);
 
         if (character == null)
@@ -79,8 +82,10 @@ public class CharactersController : ControllerBase
             return NotFound(new { message = "Player not found" });
         }
 
-        // Get the character class
-        var characterClass = await _context.Classes.FirstOrDefaultAsync(c => c.Name == createCharacterDto.Class);
+        // Get the character class with skills
+        var characterClass = await _context.Classes
+            .Include(c => c.Skills)
+            .FirstOrDefaultAsync(c => c.Name == createCharacterDto.Class);
         if (characterClass == null)
         {
             _logger.LogWarning("Character class '{ClassName}' not found", createCharacterDto.Class);
@@ -90,7 +95,8 @@ public class CharactersController : ControllerBase
         // Create character with stats initialized from class
         var character = new Character(createCharacterDto.Name, characterClass, playerId)
         {
-            Description = createCharacterDto.Description
+            Description = createCharacterDto.Description,
+            Skills = characterClass.Skills.ToList() // Assign skills from the class
         };
 
         _context.Characters.Add(character);
@@ -132,10 +138,6 @@ public class CharactersController : ControllerBase
         }
 
         character.Name = updateCharacterDto.Name;
-        character.Level = updateCharacterDto.Level;
-        character.Health = updateCharacterDto.Health;
-        character.Mana = updateCharacterDto.Mana;
-        character.Experience = updateCharacterDto.Experience;
         character.Description = updateCharacterDto.Description;
         character.UpdatedAt = DateTime.UtcNow;
 
@@ -174,7 +176,16 @@ public class CharactersController : ControllerBase
         new(
             character.Id,
             character.Name,
-            character.Class?.Name ?? "Unknown",
+            character.Class != null ? new ClassDto(
+                character.Class.Id,
+                character.Class.Name,
+                character.Class.BaseStrength,
+                character.Class.BaseAgility,
+                character.Class.BaseIntelligence,
+                character.Class.BaseWisdom,
+                character.Class.BaseCharisma,
+                character.Class.BaseEndurance,
+                character.Class.BaseLuck) : null,
             character.Level,
             character.Health,
             character.Mana,
@@ -182,13 +193,27 @@ public class CharactersController : ControllerBase
             character.Description,
             character.CreatedAt,
             character.UpdatedAt,
-            character.PlayerId);
+            character.PlayerId,
+            character.Skills.Select(s => new SkillDto(
+                s.Id,
+                s.Name,
+                s.Description,
+                s.Type,
+                s.Level,
+                s.ManaCost,
+                s.StaminaCost,
+                s.Cooldown,
+                s.RequiredLevel,
+                s.AttackPower,
+                s.DefensePower,
+                s.SpeedModifier,
+                s.MagicPower)).ToList());
 }
 
 public record CharacterDetailDto(
     int Id,
     string Name,
-    string Class,
+    ClassDto? Class,
     int Level,
     int Health,
     int Mana,
@@ -196,22 +221,42 @@ public record CharacterDetailDto(
     string? Description,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    int PlayerId);
+    int PlayerId,
+    List<SkillDto> Skills);
+
+public record ClassDto(
+    int Id,
+    string Name,
+    int BaseStrength,
+    int BaseAgility,
+    int BaseIntelligence,
+    int BaseWisdom,
+    int BaseCharisma,
+    int BaseEndurance,
+    int BaseLuck);
+
+public record SkillDto(
+    int Id,
+    string Name,
+    string Description,
+    SkillType Type,
+    int Level,
+    int ManaCost,
+    int StaminaCost,
+    int Cooldown,
+    int RequiredLevel,
+    int AttackPower,
+    int DefensePower,
+    int SpeedModifier,
+    int MagicPower);
 
 public record CreateCharacterDto(
     string Name,
     string Class,
-    int? Level = null,
-    int? Health = null,
-    int? Mana = null,
-    int? Experience = null,
     string? Description = null);
 
 public record UpdateCharacterDto(
     string Name,
     string Class,
-    int Level,
-    int Health,
-    int Mana,
-    int Experience,
     string? Description);
+}

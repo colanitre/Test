@@ -12,6 +12,10 @@ public class Mage : Class
         BaseCharisma = 10;
         BaseEndurance = 8;
         BaseLuck = 10;
-        Skills = new List<Skill> { new Fireball() }; // Initialize with the Fireball skill
+        Skills = new List<Skill>
+        {
+            new Fireball(),
+            new ArcaneSpark()
+        };
     }
 }

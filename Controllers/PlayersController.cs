@@ -3,7 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using RpgApi.Data;
 using RpgApi.Models;
 
-namespace RpgApi.Controllers;
+namespace RpgApi.Controllers
+{
 
 [ApiController]
 [Route("api/[controller]")]
@@ -202,3 +203,4 @@ public record CharacterDto(
     string? Description,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
+}

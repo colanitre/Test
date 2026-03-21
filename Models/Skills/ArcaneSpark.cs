@@ -1,0 +1,18 @@
+namespace RpgApi.Models;
+
+public class ArcaneSpark : Skill
+{
+    public ArcaneSpark() : base()
+    {
+        Name = "Arcane Spark";
+        Description = "A small instant burst of arcane energy.";
+        Cooldown = 0;
+        RequiredLevel = 1;
+        RequiredIntelligence = 10;
+        Type = SkillType.Active;
+        AttackPower = 12;
+        DefensePower = 0;
+        SpeedModifier = 3;
+        MagicPower = 15;
+    }
+}

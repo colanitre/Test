@@ -12,6 +12,11 @@ public class Warrior : Class
         BaseCharisma = 7;
         BaseEndurance = 12;
         BaseLuck = 10;
+        Skills = new List<Skill>
+        {
+            new PowerStrike(),
+            new BattleCry()
+        };
     }
 }
 
