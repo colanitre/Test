@@ -7,10 +7,10 @@ public class PowerStrike : Skill
         Name = "Power Strike";
         Description = "A heavy strike with no cooldown to use whenever you need extra damage.";
         Cooldown = 0;
-        RequiredLevel = 1;
+        RequiredLevel = 0;
         RequiredStrength = 14;
         Type = SkillType.Active;
-        AttackPower = 20;
+        AttackPower = 50;
         DefensePower = 0;
         SpeedModifier = 0;
         MagicPower = 0;

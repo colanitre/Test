@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RPG Fight Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 12px; }
+    .box { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.08); margin-bottom: 12px; }
+    label { display:inline-block; width:200px; font-weight:bold; margin-top: 4px; }
+    input { width: 140px; margin: 4px 0; }
+    button { margin-top: 8px; padding: 8px 12px; border:none; background:#007ACC; color:white; border-radius:5px; cursor:pointer; }
+    button:hover { background:#005A9C; }
+  </style>
+</head>
+<body>
+  <h1>RPG Admin</h1>
+  <a href="/">Back to fight</a>
+  <div class="box">
+    <h2>Damage Curve Config</h2>
+    <button id="reloadConfig">Load config</button>
+    <div id="curveEditor"></div>
+  </div>
+  <div class="box" id="status"></div>
+
+<script>
+  const status = document.getElementById('status');
+  const log = (msg) => {
+    const line = document.createElement('div');
+    line.textContent = msg;
+    status.prepend(line);
+  };
+
+  const fetchJson = async (url, options = {}) => {
+    const resp = await fetch(url, options);
+    const text = await resp.text();
+    try { return JSON.parse(text); } catch { return text; }
+  };
+
+  const refreshCurve = async () => {
+    const cfg = await fetchJson('/api/fights/curve');
+    const editor = document.getElementById('curveEditor');
+    editor.innerHTML = '';
+    for (const key of Object.keys(cfg)) {
+      const container = document.createElement('div');
+      const label = document.createElement('label');
+      label.textContent = key;
+      const input = document.createElement('input');
+      input.type = 'number'; input.step = '0.01'; input.id = `curve_${key}`; input.value = cfg[key];
+      container.appendChild(label);
+      container.appendChild(input);
+      editor.appendChild(container);
+    }
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save Curve';
+    saveBtn.onclick = async () => {
+      const update = {};
+      for (const key of Object.keys(cfg)) {
+        update[key] = parseFloat(document.getElementById(`curve_${key}`).value);
+      }
+      await fetch('/api/fights/curve', {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(update)
+      });
+      log('Curve saved.');
+    };
+    editor.appendChild(saveBtn);
+    log('Loaded config');
+  };
+
+  document.getElementById('reloadConfig').onclick = refreshCurve;
+  refreshCurve();
+</script>
+</body>
+</html>

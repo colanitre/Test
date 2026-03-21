@@ -9,7 +9,13 @@ using RpgApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+
+builder.Services.Configure<DamageCurveConfig>(builder.Configuration.GetSection("DamageCurveConfig"));
 
 // Add Entity Framework Core with SQLite
 builder.Services.AddDbContext<RpgContext>(options =>
@@ -46,6 +52,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+app.UseStaticFiles();
 app.UseAuthorization();
 app.MapControllers();
 

@@ -7,12 +7,12 @@ public class ShadowStab : Skill
         Name = "Shadow Stab";
         Description = "A quick, precise strike from the shadows.";
         Cooldown = 0;
-        RequiredLevel = 1;
+        RequiredLevel = 0;
         RequiredAgility = 12;
         Type = SkillType.Active;
-        AttackPower = 18;
-        DefensePower = 2;
-        SpeedModifier = 5;
+        AttackPower = 35;
+        DefensePower = 4;
+        SpeedModifier = 8;
         MagicPower = 0;
     }
 }

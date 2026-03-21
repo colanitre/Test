@@ -13,7 +13,7 @@ public class Archery : Skill
         RequiredWisdom = 10;
         Description = "A powerful archery skill." ?? string.Empty;
         Type = SkillType.Active;
-        AttackPower = 20;
+        AttackPower = 35;
         DefensePower = 5;
         SpeedModifier = 25;
         MagicPower = 0;

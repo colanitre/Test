@@ -7,7 +7,7 @@ public class BattleCry : Skill
         Name = "Battle Cry";
         Description = "Rally your spirit to temporarily boost attack and defense.";
         Cooldown = 0;
-        RequiredLevel = 1;
+        RequiredLevel = 0;
         RequiredStrength = 10;
         Type = SkillType.Passive;
         AttackPower = 5;

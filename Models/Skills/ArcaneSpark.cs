@@ -7,7 +7,7 @@ public class ArcaneSpark : Skill
         Name = "Arcane Spark";
         Description = "A small instant burst of arcane energy.";
         Cooldown = 0;
-        RequiredLevel = 1;
+        RequiredLevel = 0;
         RequiredIntelligence = 10;
         Type = SkillType.Active;
         AttackPower = 12;

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RPG Fight UI</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 12px; }
+    .box { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.08); margin-bottom: 12px; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    label { font-weight: bold; display: block; margin-bottom: 4px; }
+    select, input { width: 100%; padding: 8px; border: 1px solid #bbb; border-radius: 6px; }
+    button { margin-top: 8px; padding: 8px 12px; border:none; background:#007ACC; color:white; border-radius:5px; cursor:pointer; }
+    button:hover { background:#005A9C; }
+    ul { margin: 0; padding-left: 18px; }
+    .status { margin-top: 10px; color:#333; }
+  </style>
+</head>
+<body>
+  <h1>RPG Fight Interface</h1>
+
+  <div class="box">
+    <h2>Setup</h2>
+                 in.html">Admin damage curve</a>
+    <div class="row" style="margin-top: 10px;">
+      <div>
+        <label for="playerSelect">Player</label>
+        <select id="playerSelect"></select>
+      </div>
+      <div>
+        <label for="characterSelect">Character</label>
+        <select id="characterSelect"></select>
+      </div>
+      <div>
+        <label for="enemySelect">Enemy</label>
+        <select id="enemySelect"></select>
+      </div>
+    </div>
+    <div class="status" id="setupSta    <div class="status" id="setupSta    <div class="status" id="set/button>
+    <div class="status">Current fight id: <span id="fightId"></span></div>
+  </div>
+
+  <div class="box" id="fightView">
+    <h2>Fight Viewer</h2>
+    <div id="statsView"></div>
+    <div id="movesView"></div>
+  </div>
+
+  <div class="box">
+    <h2>Action</h2>
+    <div class="row">
+      <div>
+        <label for="skillSelect">Select Skill</label>
+        <select id="skillSelect"><option value="">Choose character first</option></select>
+      </div>
+      <div>
+        <label for="turnFightId">Fight ID</label>
+        <input type="text" id="turnFightI        <input type="text" id   </div>
+    <butto    <butto    <butto    <butto    <butto  tton id="refreshSession">Refresh Fight</button>
+  </div>
+
+  <div class="box">
+    <h2>Console</h2>
+    <textarea id="console" readonly style="width: 100%; height: 200px;"></textarea>
+  </div>
+
+<script><script><script><script><script><script><[], currentCharacter: null, currentFight: null };
+
+  const log = (message) => {
+    const c = document.getElementById('console');
+    c.value += message + '\n';
+    c.scrollTop = c.scrollHeight;
+  };
+
+  const fetchJson = async (url, options = {}) => {
+    const resp = await fetch(url    const resp = await fetch(await resp.text();
+    try { return JSON.parse(text); } catch { return text; }
+  };  };  };  };  };  };t   };  sion) => {
+    const stats = document.getElementById('statsV    const stats = document.getElementById('statsV    const stats = document.getElementByI    moves.innerHTML = '';
+
+
+   const stats = document.getElementById('sts.textContent = 'No active fight. Start one.';
+      moves.textContent = '';
+      return;
+    }
+
+    const player = {
+      name: session.characterName,
+      hp: session.characterCurrentHp,
+      maxHp: session.characterMaxHp,
+      attack: session.characterAttack,
+      defense: session.characterDefense,
+      level: session.characterLevel
+    };
+    const enemy = {
+      name: session.enemyName,
+      hp: session.enemyCurrentHp,
+      maxHp: session.enemyMaxHp,
+      attack: session.enemyAttack,
+      defense: session.enemyDefense      defense: session.enemyDefel
+    };
+
+    const panel = (title, body) => {
+      const       const       const       const       const       const       const      div      const       const       const       const       conpx       const       const       const       = '6px';
+      div.innerHTML = `<h3>${title}</h3>${body}`;
+      return div;
+    };
+
+    stats.appendChild(panel('Player', `Name: <strong>${player.name}</strong><br>Level: ${player.level}<br>HP: ${player.hp}/${player.maxHp}<br>Attack: ${player.attack}<br>Defense: ${player.defense}`));
+    stats.appendChild(panel('Enemy', `Name: <strong>${enemy.name}</strong><br>Level: ${enemy.level}<br>HP: ${enemy.hp}/${enemy.maxHp}<br>Attack: ${enemy.attack}<br>Defense: ${enemy.defense}`));
+    stats.appendChild(panel('Fight status', `Turn: ${session.currentTurn}<br>Status    stats.appendCh}<br>Winner: ${session.isVictory ? session.characterName : session.status === 'Completed' ? session.enemyName : 'None'}`));
+
+    const history = '<ul>' + (session.moves || []).map(m => `<li>${new Date(m.timestamp).toLocaleTimeString()} - ${m.isPlayer ? session.characterName : session.enemyName} ${m.description}</li>`).join('') + '</ul>';
+    moves.appendChild(panel('Recent actions', history));
+
+    state.currentFight = session;
+  };
+
+  const loadPlayers = async () => {
+    const players = await fe    const playplay   ');
+    state.players = Array.isArray(players) ? players : [];
+    const playerSelect = document.getElementById('playerSelect');
+    playerSelect.innerHTML = '<option value="">Select player</option>' + state.players.map(p => `<option value="${p.id}">${p.username}</option>`).join('');
+    document.getElementById('setupStatus').textContent = 'Players loaded.';
+  };
+
+  const loadEnemies = async () => {
+    const enemies = await fetchJson('/api/enemies');
+    state.enemies = Array.isArray(enemies) ? enemies : [];
+    const enemySelect = document.getElementById('enemySelect');
+    enemySelect.innerHTML = '<option value="">Random enemy</option>' + state.enemies.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    document.getElementById('setupStatus').textContent = 'Enemies loaded.';
+  };
+
+  const loadCharacters = async (playerId) => {
+    if (!playerId) return;
+    const chars = await fetchJson(`/api/players/${playerId}/characters`);
+    const select = document.getElementById('characterSelect');
+    if (!Array.isArray(chars)) return;
+    select.innerHTML = '<option value="">Select character</option>' + chars.map(c => `<option value="${c.id}" data-name="${c.name}">${c.name} (Lv${c.level})</option>`).join('');
+    document.getElementById('setupStatus').textContent = `Characters loaded for player ${playerId}.`;
+  };
+
+  const loadSkills = async (playerId, characterId) => {
+    if (!playerId || !characterId) return;
+    const character = await fetchJson(`/api/players/${playerId}/characters/${characterId}`);
+    state.currentCharacter = character;
+    const select = document.getElementById('skillSelect');
+    if (!character || !character.skills) {
+      select.innerHTML = '<option value="">No skills available</option>';
+      return;
+    }
+    select.innerHTML = '<option value="">Select skill</option>' + character.skills.map(s => `<option value=    select.innerHTML = 'ion>`).join('');
+  };
+
+  document.getElementById('playerSelect').addEventListener('change', async (e) => {
+    const pid = e.target.value;
+    await loadCharacters(pid);
+    document.getElementById('skillSelect').innerHTML = '<option value="">Choose character first</option>';
+  });
+
+  document.getElementById('characterSelect').addEventListener('change', async (e) => {
+    const pid = document.getElementById('playerSelect').value;
+    const cid = e.target.value;
+    await loadSkills(pid, cid);
+  });
+
+  document.getEl  document.getEl  document.getEl  documen)   document.getEl  document.getEl  document.getEl  documen)   document.getEl  doe);
+    const     const     const     const t.getEleme    const     const     const     const t.getEleme    ce =     const     const     const     const alue;
+    if (!playerId || !characterId) { log('Choose player and character')    if (!pla
+    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    con    cofights/s    con    con    con    con    con    con    ct-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+
+                              
+                                                                                                          Id    alue = result.id;
+      renderFight(result);
+      log(`Fight started: ${result.characterN      log(`Fight started: ${result.characterN      log(`Fightfight error: ' + JSON.stringify(result));
+    }
+  };
+
+  document.getElementById('takeTurn').onclick = async () => {
+    const fightId = document.getElementById('turnFightId').value;
+    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId = parseInt(docu    const skillId =  !playerId) { log('Select fight and skill first'); return; }
+
+    const result = await fetchJson(`/api/fights/${fightId}/turn`, {
+      method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ playerId, skillId })
+    });
+
+    if (result && result.id) {
+      document.getElementById('turnFightId').value = result.id;
+      renderFight(result);
+      log(`Turn taken by ${result.characterName}: skill ${document.getElementById('skillSelect').selectedOptions[0].text}`);
+    } else {
+      log('Turn error: ' + JSON.stringify(result));
+    }
+  };
+
+  document.getElementById('refreshSession').onclick = async () => {
+    const fightId = document.getElementById('turnFightId').value;
+    if (!fightId) { log('No fight selected'); return; }
+    const result = await fetchJson(`/api/fights/${fightId}`);
+    if (result && result.id) {
+      renderFight(result);
+      log('Session refreshed');
+    } else {
+      log('Refresh error: ' + JSON.stringify(result));
+    }
+  };
+
+  const init = async () => {
+    await Promise.all([loadPlayers(), loadEnemies()]);
+    document.getElementById('setupStatus').textContent = 'Ready';
+  };
+
+  init();
+</script>
+</body>
+</html>

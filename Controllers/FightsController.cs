@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using RpgApi.Data;
 using RpgApi.Models;
 
@@ -11,14 +12,16 @@ public class FightsController : ControllerBase
 {
     private readonly RpgContext _context;
     private readonly ILogger<FightsController> _logger;
+    private readonly DamageCurveConfig _damageConfig;
 
     private static readonly TimeSpan StaleInterval = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan LockTimeout = TimeSpan.FromMinutes(5);
 
-    public FightsController(RpgContext context, ILogger<FightsController> logger)
+    public FightsController(RpgContext context, ILogger<FightsController> logger, IOptions<DamageCurveConfig> options)
     {
         _context = context;
         _logger = logger;
+        _damageConfig = options.Value;
     }
 
     [HttpGet("available")]
@@ -155,6 +158,37 @@ public class FightsController : ControllerBase
         return Ok(await BuildSummaryDto(id));
     }
 
+    [HttpGet("curve")]
+    public ActionResult<DamageCurveConfig> GetDamageCurveConfig()
+    {
+        return Ok(_damageConfig);
+    }
+
+    [HttpPut("curve")]
+    public ActionResult SetDamageCurveConfig([FromBody] DamageCurveConfig settings)
+    {
+        // For now this update only affects in-memory config for the current process.
+        // In production, persist to appsettings or database as needed.
+        _damageConfig.CharacterAttackWeight = settings.CharacterAttackWeight;
+        _damageConfig.CharacterMagicWeight = settings.CharacterMagicWeight;
+        _damageConfig.CharacterSpeedWeight = settings.CharacterSpeedWeight;
+        _damageConfig.SkillAttackWeight = settings.SkillAttackWeight;
+        _damageConfig.SkillMagicWeight = settings.SkillMagicWeight;
+        _damageConfig.SkillSpeedWeight = settings.SkillSpeedWeight;
+        _damageConfig.EnemyDefenseWeight = settings.EnemyDefenseWeight;
+        _damageConfig.EnemyMagicDefenseWeight = settings.EnemyMagicDefenseWeight;
+        _damageConfig.EnemyStaminaDefenseWeight = settings.EnemyStaminaDefenseWeight;
+        _damageConfig.EnemyAttackWeight = settings.EnemyAttackWeight;
+        _damageConfig.EnemyMagicWeight = settings.EnemyMagicWeight;
+        _damageConfig.EnemySpeedWeight = settings.EnemySpeedWeight;
+        _damageConfig.CharacterDefenseWeight = settings.CharacterDefenseWeight;
+        _damageConfig.CharacterMagicDefenseWeight = settings.CharacterMagicDefenseWeight;
+        _damageConfig.CharacterStaminaDefenseWeight = settings.CharacterStaminaDefenseWeight;
+        _damageConfig.MinimumDamage = settings.MinimumDamage;
+
+        return NoContent();
+    }
+
     [HttpPost("{id}/turn")]
     public async Task<ActionResult<FightSummaryDto>> TakeTurn(Guid id, [FromBody] FightTurnDto dto)
     {
@@ -199,7 +233,17 @@ public class FightsController : ControllerBase
         if (!characterCooldowns.TryGetValue(playerSkill.Id, out var cd) || cd > 0)
             return BadRequest(new { message = "Skill is on cooldown" });
 
-        var plDamage = Math.Max(1, (character.Attack + playerSkill.AttackPower) - enemy.Defense);
+        var charPower = character.Attack * _damageConfig.CharacterAttackWeight
+                        + character.Magic * _damageConfig.CharacterMagicWeight
+                        + character.Speed * _damageConfig.CharacterSpeedWeight;
+        var skillPower = playerSkill.AttackPower * _damageConfig.SkillAttackWeight
+                       + playerSkill.MagicPower * _damageConfig.SkillMagicWeight
+                       + playerSkill.SpeedModifier * _damageConfig.SkillSpeedWeight;
+        var charDefense = enemy.Defense * _damageConfig.EnemyDefenseWeight
+                        + enemy.Magic * _damageConfig.EnemyMagicDefenseWeight
+                        + enemy.Stamina * _damageConfig.EnemyStaminaDefenseWeight;
+
+        var plDamage = Math.Max(_damageConfig.MinimumDamage, (int)Math.Floor(charPower + skillPower - charDefense));
         session.EnemyCurrentHp -= plDamage;
         session.Moves.Add(new FightMove
         {
@@ -235,15 +279,24 @@ public class FightsController : ControllerBase
         int enemyDamage;
         string enemyEvent;
 
+        var enemyPower = enemy.Attack * _damageConfig.EnemyAttackWeight
+                        + enemy.Magic * _damageConfig.EnemyMagicWeight
+                        + enemy.Speed * _damageConfig.EnemySpeedWeight;
+        var enemyDefense = character.Defense * _damageConfig.CharacterDefenseWeight
+                         + character.Magic * _damageConfig.CharacterMagicDefenseWeight
+                         + character.Stamina * _damageConfig.CharacterStaminaDefenseWeight;
+
         if (enemySkill != null)
         {
             enemyCooldowns[enemySkill.Id] = enemySkill.Cooldown;
-            enemyDamage = Math.Max(1, (enemy.Attack + enemySkill.AttackPower) - character.Defense);
+            enemyDamage = Math.Max(_damageConfig.MinimumDamage,
+                (int)Math.Floor(enemyPower + enemySkill.AttackPower * 1.5 + enemySkill.MagicPower * 1.5 - enemyDefense));
             enemyEvent = $"Enemy uses {enemySkill.Name}; deals {enemyDamage} damage.";
         }
         else
         {
-            enemyDamage = Math.Max(1, enemy.Attack - character.Defense);
+            enemyDamage = Math.Max(_damageConfig.MinimumDamage,
+                (int)Math.Floor(enemyPower - enemyDefense));
             enemyEvent = $"Enemy attacks normally; deals {enemyDamage} damage.";
         }
 
