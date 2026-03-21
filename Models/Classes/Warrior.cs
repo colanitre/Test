@@ -14,7 +14,14 @@ public class Warrior : Class
         BaseLuck = 10;
         Skills = new List<Skill>
         {
+                new StarterStrike(),
+                new StarterGuard(),
             new PowerStrike(),
+            new Cleave(),
+            new Whirlwind(),
+            new Shockwave(),
+            new IronSkin(),
+            new LastStand(),
             new BattleCry()
         };
     }

@@ -7,6 +7,9 @@
   <style>
     body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 12px; }
     .box { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.08); margin-bottom: 12px; }
+    .box-collapsible-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .box-collapsible-title { font-weight: bold; color: #333; }
+    .box-collapse-toggle { margin-top: 0; padding: 4px 8px; font-size: 12px; }
     .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     label { font-weight: bold; display: block; margin-bottom: 4px; }
     select, input { width: 100%; padding: 8px; border: 1px solid #bbb; border-radius: 6px; }
@@ -24,12 +27,20 @@
     .log-error { background: #f8d7da; color: #721c24; border-left: 3px solid #dc3545; font-weight: bold; }
     .log-time { color: #666; font-size: 11px; }
     .log-content { font-weight: normal; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
+    .stats-card { border: 1px solid #ddd; background: #fafafa; border-radius: 6px; padding: 10px; }
+    .stats-card h4 { margin: 0 0 8px 0; }
+    .stats-line { font-size: 13px; margin: 3px 0; }
+    .skill-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
+    .skill-overview-card { border: 1px solid #dde3ea; border-radius: 6px; background: #fff; padding: 8px; }
+    .skill-overview-card h5 { margin: 0 0 6px 0; font-size: 13px; }
+    .skill-overview-item { font-size: 12px; margin-bottom: 4px; }
   </style>
 </head>
 <body>
   <a href="/admin.html" style="margin-top: 10px;">Admin</a>
 
-  <div class="box">
+  <div class="box" id="setupBox">
     <div class="row">
       <div>
         <label for="playerSelect">Player</label>
@@ -70,6 +81,50 @@
     <button id="attackButton">Attack</button>
     <button id="refreshSession">Refresh Session</button>
     <button id="clearLogButton">Clear Log</button>
+    <button id="startNextFightButton" style="display:none;">Start Next Fight</button>
+
+    <div style="margin-top: 8px; font-size: 13px; color: #333;">
+      <label style="display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; font-weight: normal;">
+        <input type="checkbox" id="autoStartNextFight" checked style="width:auto;" />
+        Auto-start next fight
+      </label>
+      <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal;">
+        <input type="checkbox" id="autoRandomEnemy" checked style="width:auto;" />
+        Pick random enemy for next fight
+      </label>
+    </div>
+
+    <div style="margin-top: 10px; padding: 10px; background: #f8fbff; border: 1px solid #d8e9fb; border-radius: 6px;">
+      <h4 style="margin: 0 0 8px 0;">Selected Skill Details</h4>
+      <div id="skillDetails" style="font-size: 13px; color: #333;">Select a skill to see details.</div>
+    </div>
+
+    <div id="skillsOverviewBox" style="margin-top: 10px; padding: 10px; background: #fbfbfb; border: 1px solid #ececec; border-radius: 6px;">
+      <div id="skillsOverview" style="font-size: 13px; color: #333;">Choose a character to view available skills.</div>
+    </div>
+
+    <div class="stats-grid" id="fightStats" style="display:none;">
+      <div class="stats-card">
+        <h4>Character Stats</h4>
+        <div class="stats-line"><strong>Name:</strong> <span id="charStatsName">-</span></div>
+        <div class="stats-line"><strong>Level:</strong> <span id="charStatsLevel">-</span></div>
+        <div class="stats-line"><strong>HP:</strong> <span id="charStatsHp">-</span></div>
+        <div class="stats-line"><strong>Mana:</strong> <span id="charStatsMana">-</span></div>
+        <div class="stats-line"><strong>Stamina:</strong> <span id="charStatsStamina">-</span></div>
+        <div class="stats-line"><strong>Attack/Defense:</strong> <span id="charStatsAtkDef">-</span></div>
+        <div class="stats-line"><strong>Regen:</strong> <span id="charStatsRegen">-</span></div>
+      </div>
+      <div class="stats-card">
+        <h4>Enemy Stats</h4>
+        <div class="stats-line"><strong>Name:</strong> <span id="enemyStatsName">-</span></div>
+        <div class="stats-line"><strong>Level:</strong> <span id="enemyStatsLevel">-</span></div>
+        <div class="stats-line"><strong>HP:</strong> <span id="enemyStatsHp">-</span></div>
+        <div class="stats-line"><strong>Mana:</strong> <span id="enemyStatsMana">-</span></div>
+        <div class="stats-line"><strong>Stamina:</strong> <span id="enemyStatsStamina">-</span></div>
+        <div class="stats-line"><strong>Attack/Defense:</strong> <span id="enemyStatsAtkDef">-</span></div>
+        <div class="stats-line"><strong>Regen:</strong> <span id="enemyStatsRegen">-</span></div>
+      </div>
+    </div>
     
     <div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
       <h4 style="margin-top: 0;">Passive Skills</h4>
@@ -90,7 +145,9 @@
   </div>
 
 <script>
-  const state = { players: [], enemies: [], currentCharacter: null, currentFight: null };
+  const state = { players: [], enemies: [], currentCharacter: null, currentFight: null, lastLoggedMoveCount: 0 };
+  const getSavedSkillKey = (characterId) => `selectedSkillId_${characterId}`;
+  const getSavedPassiveSkillKey = (characterId) => `selectedPassiveSkillId_${characterId}`;
 
   // Load saved character selection from localStorage
   const loadSavedCharacter = () => {
@@ -129,6 +186,25 @@
   const logSystem = (message) => addLogMessage(message, 'system');
   const clearBattleLog = () => {
     document.getElementById('battleLog').innerHTML = '';
+    state.lastLoggedMoveCount = 0;
+  };
+
+  const appendNewMovesToLog = (fightResponse) => {
+    if (!fightResponse || !Array.isArray(fightResponse.moves)) {
+      return;
+    }
+
+    const newMoves = fightResponse.moves.slice(state.lastLoggedMoveCount);
+    newMoves.forEach(move => {
+      const text = `Turn ${move.turn}: ${move.description}`;
+      if (move.isPlayer) {
+        logPlayer(`🎯 ${text}`);
+      } else {
+        logEnemy(`👹 ${text}`);
+      }
+    });
+
+    state.lastLoggedMoveCount = fightResponse.moves.length;
   };
 
   const fetchJson = async (url, options = {}) => {
@@ -151,7 +227,7 @@
     }
     state.players = players;
     const select = document.getElementById('playerSelect');
-    select.innerHTML = '<option value="">Select player</option>' + players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    select.innerHTML = '<option value="">Select player</option>' + players.map(p => `<option value="${p.id}">${p.username || p.name || ('Player ' + p.id)}</option>`).join('');
     document.getElementById('setupStatus').textContent = 'Players loaded.';
   };
 
@@ -189,7 +265,7 @@
     document.getElementById('playerProfile').style.display = 'block';
   };
 
-  const loadCharacters = async (playerId) => {
+  const loadCharacters = async (playerId, preferredCharacterId = null, triggerChange = false) => {
     if (!playerId) {
       document.getElementById('characterSelect').innerHTML = '<option value="">Select player first</option>';
       return;
@@ -202,7 +278,103 @@
       return;
     }
     select.innerHTML = '<option value="">Select character</option>' + chars.map(c => `<option value="${c.id}" data-name="${c.name}">${c.name} (Lv${c.level})</option>`).join('');
+
+    const selectedCharacterId = preferredCharacterId || localStorage.getItem('selectedCharacterId');
+    if (selectedCharacterId && select.querySelector(`option[value="${selectedCharacterId}"]`)) {
+      select.value = selectedCharacterId;
+      if (triggerChange) {
+        const event = new Event('change');
+        select.dispatchEvent(event);
+      }
+    }
+
     document.getElementById('setupStatus').textContent = `Characters loaded for player ${playerId}.`;
+  };
+
+  const updateFightStats = (fight) => {
+    const statsRoot = document.getElementById('fightStats');
+    if (!fight) {
+      statsRoot.style.display = 'none';
+      return;
+    }
+
+    statsRoot.style.display = 'grid';
+
+    document.getElementById('charStatsName').textContent = fight.characterName;
+    document.getElementById('charStatsLevel').textContent = fight.characterLevel;
+    document.getElementById('charStatsHp').textContent = `${fight.characterCurrentHp} / ${fight.characterMaxHp}`;
+    document.getElementById('charStatsMana').textContent = `${fight.characterCurrentMana} / ${fight.characterMaxMana}`;
+    document.getElementById('charStatsStamina').textContent = `${fight.characterCurrentStamina} / ${fight.characterMaxStamina}`;
+    document.getElementById('charStatsAtkDef').textContent = `${fight.characterAttack} / ${fight.characterDefense}`;
+    document.getElementById('charStatsRegen').textContent = `HP +${fight.characterHealthRegen}, Mana +${fight.characterManaRegen}, Stamina +${fight.characterStaminaRegen}`;
+
+    document.getElementById('enemyStatsName').textContent = fight.enemyName;
+    document.getElementById('enemyStatsLevel').textContent = fight.enemyLevel;
+    document.getElementById('enemyStatsHp').textContent = `${fight.enemyCurrentHp} / ${fight.enemyMaxHp}`;
+    document.getElementById('enemyStatsMana').textContent = `${fight.enemyCurrentMana} / ${fight.enemyMaxMana}`;
+    document.getElementById('enemyStatsStamina').textContent = `${fight.enemyCurrentStamina} / ${fight.enemyMaxStamina}`;
+    document.getElementById('enemyStatsAtkDef').textContent = `${fight.enemyAttack} / ${fight.enemyDefense}`;
+    document.getElementById('enemyStatsRegen').textContent = `HP +${fight.enemyHealthRegen}, Mana +${fight.enemyManaRegen}, Stamina +${fight.enemyStaminaRegen}`;
+  };
+
+  const renderSkillDetails = (skillId, source = 'active') => {
+    const details = document.getElementById('skillDetails');
+    if (!state.currentCharacter || !Array.isArray(state.currentCharacter.skills)) {
+      details.textContent = 'Select a character first.';
+      return;
+    }
+
+    if (!skillId) {
+      details.textContent = 'Select a skill to see details.';
+      return;
+    }
+
+    const skill = state.currentCharacter.skills.find(s => String(s.id) === String(skillId));
+    if (!skill) {
+      details.textContent = 'Skill details not found.';
+      return;
+    }
+
+    const section = source === 'passive' ? 'Passive' : 'Active';
+    details.innerHTML = `
+      <div><strong>${section}:</strong> ${skill.name} (${skill.type})</div>
+      <div><strong>Description:</strong> ${skill.description || 'No description'}</div>
+      <div><strong>Required level:</strong> ${skill.requiredLevel} | <strong>Cooldown:</strong> ${skill.cooldown}</div>
+      <div><strong>Mana cost:</strong> ${skill.manaCost} | <strong>Stamina cost:</strong> ${skill.staminaCost}</div>
+      <div><strong>Attack:</strong> ${skill.attackPower} | <strong>Defense:</strong> ${skill.defensePower} | <strong>Speed:</strong> ${skill.speedModifier} | <strong>Magic:</strong> ${skill.magicPower}</div>
+    `;
+  };
+
+  const renderSkillsOverview = (usableSkills) => {
+    const overview = document.getElementById('skillsOverview');
+    if (!Array.isArray(usableSkills) || usableSkills.length === 0) {
+      overview.textContent = 'No usable skills at current level.';
+      return;
+    }
+
+    const activeSkills = usableSkills.filter(s => s.type !== 'Passive');
+    const passiveSkills = usableSkills.filter(s => s.type === 'Passive');
+
+    const activeHtml = activeSkills.length > 0
+      ? activeSkills.map(s => `<div class="skill-overview-item"><strong>${s.name}</strong> (Lv ${s.requiredLevel}) - MP ${s.manaCost}, SP ${s.staminaCost}, CD ${s.cooldown}, ATK ${s.attackPower}, DEF ${s.defensePower}, SPD ${s.speedModifier}, MAG ${s.magicPower}</div>`).join('')
+      : '<div class="skill-overview-item">None</div>';
+
+    const passiveHtml = passiveSkills.length > 0
+      ? passiveSkills.map(s => `<div class="skill-overview-item"><strong>${s.name}</strong> (Lv ${s.requiredLevel}) - MP ${s.manaCost}, SP ${s.staminaCost}, CD ${s.cooldown}, ATK ${s.attackPower}, DEF ${s.defensePower}, SPD ${s.speedModifier}, MAG ${s.magicPower}</div>`).join('')
+      : '<div class="skill-overview-item">None</div>';
+
+    overview.innerHTML = `
+      <div class="skill-overview-grid">
+        <div class="skill-overview-card">
+          <h5>Active Skills (${activeSkills.length})</h5>
+          ${activeHtml}
+        </div>
+        <div class="skill-overview-card">
+          <h5>Passive Skills (${passiveSkills.length})</h5>
+          ${passiveHtml}
+        </div>
+      </div>
+    `;
   };
 
   const loadSkills = async (playerId, characterId) => {
@@ -220,11 +392,40 @@
       return;
     }
     state.currentCharacter = character;
-    skillSelect.innerHTML = '<option value="">Select skill</option>' + character.skills.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    const usableSkills = character.skills.filter(s => character.level >= s.requiredLevel);
+    skillSelect.innerHTML = '<option value="">Select skill</option>' + usableSkills.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+    if (usableSkills.length === 0) {
+      skillSelect.innerHTML = '<option value="">No usable skills at current level</option>';
+    }
+
+    const savedSkillId = localStorage.getItem(getSavedSkillKey(characterId));
+    if (savedSkillId && skillSelect.querySelector(`option[value="${savedSkillId}"]`)) {
+      skillSelect.value = savedSkillId;
+    } else {
+      const firstSkill = usableSkills[0];
+      if (firstSkill) {
+        skillSelect.value = String(firstSkill.id);
+        localStorage.setItem(getSavedSkillKey(characterId), String(firstSkill.id));
+      }
+    }
     
     // Populate passive skills separately
-    const passiveSkills = character.skills.filter(s => s.type === 'Passive');
+    const passiveSkills = usableSkills.filter(s => s.type === 'Passive');
     passiveSkillSelect.innerHTML = '<option value="">Select passive</option>' + passiveSkills.map(s => `<option value="${s.id}">${s.name} (Level ${s.requiredLevel})</option>`).join('');
+
+    if (passiveSkills.length === 0) {
+      passiveSkillSelect.innerHTML = '<option value="">No passive skills available</option>';
+    }
+
+    const savedPassiveSkillId = localStorage.getItem(getSavedPassiveSkillKey(characterId));
+    if (savedPassiveSkillId && passiveSkillSelect.querySelector(`option[value="${savedPassiveSkillId}"]`)) {
+      passiveSkillSelect.value = savedPassiveSkillId;
+    }
+
+    renderSkillsOverview(usableSkills);
+
+    renderSkillDetails(skillSelect.value, 'active');
   };
 
   const startFight = async () => {
@@ -248,10 +449,39 @@
     const fight = await result.json();
     state.currentFight = fight;
     document.getElementById('fightPanel').style.display = 'block';
+    document.getElementById('startNextFightButton').style.display = 'none';
     clearBattleLog();
     logSystem('⚔️ Fight started! ⚔️');
+    updateFightStats(fight);
     loadSkills(playerId, characterId);
     updateActivePassivesDisplay();
+  };
+
+  const chooseNextEnemy = (excludeEnemyId = null) => {
+    const enemySelect = document.getElementById('enemySelect');
+    if (!state.enemies || state.enemies.length === 0) {
+      return false;
+    }
+
+    const pool = state.enemies.filter(e => String(e.id) !== String(excludeEnemyId));
+    const choices = pool.length > 0 ? pool : state.enemies;
+    const randomEnemy = choices[Math.floor(Math.random() * choices.length)];
+    enemySelect.value = String(randomEnemy.id);
+    return true;
+  };
+
+  const startNextFight = async () => {
+    const autoRandomEnemy = document.getElementById('autoRandomEnemy').checked;
+    if (autoRandomEnemy) {
+      const currentEnemyId = state.currentFight ? state.currentFight.enemyId : null;
+      const hasEnemy = chooseNextEnemy(currentEnemyId);
+      if (!hasEnemy) {
+        logError('No enemies available for next fight');
+        return;
+      }
+    }
+
+    await startFight();
   };
 
   const updateActivePassivesDisplay = () => {
@@ -291,6 +521,7 @@
     state.currentFight = fight;
     const skillName = state.currentCharacter.skills.find(s => s.id == skillId)?.name || 'Unknown';
     logSystem(`✨ Activated passive skill: ${skillName}`);
+    updateFightStats(fight);
     updateActivePassivesDisplay();
   };
 
@@ -313,12 +544,56 @@
     state.currentFight = fight;
     const skillName = state.currentCharacter.skills.find(s => s.id == skillId)?.name || 'Unknown';
     logSystem(`❌ Deactivated passive skill: ${skillName}`);
+    updateFightStats(fight);
     updateActivePassivesDisplay();
+  };
+
+  const makeBoxCollapsible = (boxId, title, defaultCollapsed = false) => {
+    const box = document.getElementById(boxId);
+    if (!box || box.dataset.collapsibleReady === 'true') {
+      return;
+    }
+
+    const content = document.createElement('div');
+    while (box.firstChild) {
+      content.appendChild(box.firstChild);
+    }
+
+    const header = document.createElement('div');
+    header.className = 'box-collapsible-header';
+
+    const heading = document.createElement('div');
+    heading.className = 'box-collapsible-title';
+    heading.textContent = title;
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'box-collapse-toggle';
+
+    let isCollapsed = defaultCollapsed;
+    const refreshButtonText = () => {
+      toggle.textContent = isCollapsed ? 'Expand' : 'Collapse';
+    };
+
+    toggle.addEventListener('click', () => {
+      isCollapsed = !isCollapsed;
+      content.style.display = isCollapsed ? 'none' : 'block';
+      refreshButtonText();
+    });
+
+    header.appendChild(heading);
+    header.appendChild(toggle);
+    box.appendChild(header);
+    box.appendChild(content);
+
+    content.style.display = isCollapsed ? 'none' : 'block';
+    refreshButtonText();
+    box.dataset.collapsibleReady = 'true';
   };
 
   // Event listeners
   document.getElementById('playerSelect').addEventListener('change', (e) => {
-    loadCharacters(e.target.value);
+    loadCharacters(e.target.value, null, true);
     loadPlayerProfile(e.target.value);
   });
   document.getElementById('characterSelect').addEventListener('change', (e) => {
@@ -326,6 +601,22 @@
     const cid = e.target.value;
     localStorage.setItem('selectedCharacterId', cid);
     loadSkills(pid, cid);
+  });
+  document.getElementById('skillSelect').addEventListener('change', (e) => {
+    const characterId = document.getElementById('characterSelect').value;
+    if (!characterId || !e.target.value) {
+      renderSkillDetails('', 'active');
+      return;
+    }
+    localStorage.setItem(getSavedSkillKey(characterId), e.target.value);
+    renderSkillDetails(e.target.value, 'active');
+  });
+  document.getElementById('passiveSkillSelect').addEventListener('change', (e) => {
+    const characterId = document.getElementById('characterSelect').value;
+    if (characterId && e.target.value) {
+      localStorage.setItem(getSavedPassiveSkillKey(characterId), e.target.value);
+    }
+    renderSkillDetails(e.target.value, 'passive');
   });
   document.getElementById('playerSelect').addEventListener('change', (e) => {
     localStorage.setItem('selectedPlayerId', e.target.value);
@@ -351,18 +642,10 @@
     }
     const response = await result.json();
     
-    // Log the moves from this turn
-    if (response.moves && Array.isArray(response.moves)) {
-      response.moves.forEach(move => {
-        if (move.isPlayer) {
-          logPlayer(`🎯 ${move.description}`);
-        } else {
-          logEnemy(`👹 ${move.description}`);
-        }
-      });
-    }
+    appendNewMovesToLog(response);
 
     state.currentFight = response;
+    updateFightStats(response);
     updateActivePassivesDisplay();
     
     // Check for victory/defeat
@@ -372,9 +655,18 @@
         // Refresh player profile after victory
         const playerId = document.getElementById('playerSelect').value;
         loadPlayerProfile(playerId);
-        loadCharacters(playerId);
+        loadCharacters(playerId, response.characterId, true);
       } else {
         logSystem('💀 DEFEAT! You were defeated... 💀');
+      }
+
+      document.getElementById('startNextFightButton').style.display = 'inline-block';
+      const autoStart = document.getElementById('autoStartNextFight').checked;
+      if (autoStart) {
+        logSystem('⏭️ Starting next fight with the same player/character...');
+        setTimeout(() => {
+          startNextFight();
+        }, 600);
       }
     }
   });
@@ -385,13 +677,22 @@
       logError('Failed to refresh session');
       return;
     }
+    state.currentFight = session;
+    updateFightStats(session);
+    updateActivePassivesDisplay();
     logSystem('🔄 Session refreshed');
-    // Could add more detailed status display here if needed
   });
   document.getElementById('clearLogButton').addEventListener('click', clearBattleLog);
 
   document.getElementById('activatePassiveButton').addEventListener('click', activatePassiveSkill);
   document.getElementById('deactivatePassiveButton').addEventListener('click', deactivatePassiveSkill);
+  document.getElementById('startNextFightButton').addEventListener('click', startNextFight);
+
+  // Add collapsible controls to major UI boxes
+  makeBoxCollapsible('setupBox', 'Fight Setup');
+  makeBoxCollapsible('playerProfile', 'Player Profile', true);
+  makeBoxCollapsible('fightPanel', 'Fight Panel');
+  makeBoxCollapsible('skillsOverviewBox', 'Available Skills Overview', true);
 
   // Init
   loadPlayers();

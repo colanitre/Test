@@ -15,6 +15,20 @@ public class Lich : EnemyClass
         BaseCharisma = 12;
         BaseEndurance = 11;
         BaseLuck = 8;
-        Skills = new List<Skill> { new Fireball(), new Blizzard(), new HolyLight() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new Fireball(),
+            new ArcaneBlast(),
+            new Blizzard(),
+            new ChainLightning(),
+            new Meteor(),
+            new HolyLight(),
+            new TemporalShift(),
+            new MagicShield(),
+            new ArcaneWard(),
+            new ManaBarrier()
+        };
     }
 }

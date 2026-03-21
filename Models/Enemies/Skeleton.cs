@@ -15,6 +15,12 @@ public class Skeleton : EnemyClass
         BaseCharisma = 3;
         BaseEndurance = 9;
         BaseLuck = 6;
-        Skills = new List<Skill> { new PowerStrike() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new PowerStrike(),
+            new Cleave()
+        };
     }
 }

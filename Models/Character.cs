@@ -59,10 +59,10 @@ public class Character
         HealthRegen = characterClass.BaseEndurance / 5;
         ManaRegen = characterClass.BaseWisdom / 5;
         StaminaRegen = characterClass.BaseAgility / 5;
-        Attack = characterClass.BaseStrength * characterClass.BaseAgility; // Assuming attack is based on strength and agility for simplicity
-        Defense = characterClass.BaseEndurance * characterClass.BaseAgility; // Assuming defense is based on endurance and agility for simplicity
-        Speed = characterClass.BaseAgility*characterClass.BaseStrength ; // Assuming speed is based on agility for simplicity
-        Magic = characterClass.BaseIntelligence * characterClass.BaseCharisma; // Assuming magic is based on intelligence and charisma for simplicity
+        Attack = (characterClass.BaseStrength * characterClass.BaseAgility) + (characterClass.BaseIntelligence * characterClass.BaseCharisma);
+        Defense = (characterClass.BaseEndurance * characterClass.BaseAgility) + (characterClass.BaseAgility * characterClass.BaseIntelligence);
+        Speed = characterClass.BaseAgility * characterClass.BaseStrength;
+        Magic = characterClass.BaseIntelligence * characterClass.BaseCharisma;
         Skills = characterClass.Skills.ToList(); // Initialize with the list of skills from the character class
     }
 

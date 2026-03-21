@@ -15,6 +15,14 @@ public class Troll : EnemyClass
         BaseCharisma = 5;
         BaseEndurance = 18;
         BaseLuck = 5;
-        Skills = new List<Skill> { new PowerStrike(), new IronSkin() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new PowerStrike(),
+            new Shockwave(),
+            new IronSkin(),
+            new LastStand()
+        };
     }
 }

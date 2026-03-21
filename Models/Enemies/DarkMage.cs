@@ -15,6 +15,15 @@ public class DarkMage : EnemyClass
         BaseCharisma = 10;
         BaseEndurance = 8;
         BaseLuck = 7;
-        Skills = new List<Skill> { new Fireball(), new IceShards() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new ArcaneBlast(),
+            new Fireball(),
+            new IceShards(),
+            new LightningBolt(),
+            new ArcaneWard()
+        };
     }
 }

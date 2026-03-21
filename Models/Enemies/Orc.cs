@@ -15,6 +15,15 @@ public class Orc : EnemyClass
         BaseCharisma = 3;
         BaseEndurance = 14;
         BaseLuck = 6;
-        Skills = new List<Skill> { new Fireball() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new PowerStrike(),
+            new Cleave(),
+            new Shockwave(),
+            new IronSkin(),
+            new BattleCry()
+        };
     }
 }

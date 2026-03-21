@@ -39,38 +39,41 @@ public class Enemy
 
     }
 
-    public Enemy(string name, EnemyClass enemyClass)
+    public Enemy(string name, EnemyClass enemyClass, int? level = null)
     {
         Name = name ?? string.Empty;
         EnemyClass = enemyClass;
         EnemyClassId = enemyClass.Id;
-        Level = enemyClass.BaseLevel;
+        Level = level ?? enemyClass.BaseLevel;
         Type = enemyClass.Type;
 
         // Calculate difficulty multiplier based on enemy type
         double difficultyMultiplier = Type switch
         {
             EnemyType.Common => 1.0,
-            EnemyType.Elite => 2.0,
-            EnemyType.Boss => 3.0,
-            EnemyType.Legendary => 4.0,
+            EnemyType.Elite => 1.25,
+            EnemyType.Boss => 1.5,
+            EnemyType.Legendary => 2.0,
             _ => 1.0
         };
 
-        // Initialize stats from the enemy class with difficulty multiplier
-        MaxHealth = (int)(enemyClass.BaseStrength * enemyClass.BaseEndurance * difficultyMultiplier);
+        // Apply level scaling: +2% per level above base level
+        double levelMultiplier = 1.0 + (Level - enemyClass.BaseLevel) * 0.02;
+
+        // Initialize stats from the enemy class with difficulty and level multipliers
+        MaxHealth = (int)(enemyClass.BaseStrength * enemyClass.BaseEndurance * difficultyMultiplier * levelMultiplier);
         Health = MaxHealth;
-        MaxMana = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier);
+        MaxMana = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier);
         Mana = MaxMana;
-        MaxStamina = (int)(enemyClass.BaseEndurance * enemyClass.BaseAgility * difficultyMultiplier);
+        MaxStamina = (int)(enemyClass.BaseEndurance * enemyClass.BaseAgility * difficultyMultiplier * levelMultiplier);
         Stamina = MaxStamina;
-        HealthRegen = (int)(enemyClass.BaseEndurance * difficultyMultiplier / 5);
-        ManaRegen = (int)(enemyClass.BaseWisdom * difficultyMultiplier / 5);
-        StaminaRegen = (int)(enemyClass.BaseAgility * difficultyMultiplier / 5);
-        Attack = (int)(enemyClass.BaseStrength * enemyClass.BaseAgility * difficultyMultiplier);
-        Defense = (int)(enemyClass.BaseEndurance * enemyClass.BaseStrength * difficultyMultiplier);
-        Speed = (int)(enemyClass.BaseAgility * 2 * difficultyMultiplier);
-        Magic = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier);
+        HealthRegen = (int)(enemyClass.BaseEndurance * difficultyMultiplier * levelMultiplier / 5);
+        ManaRegen = (int)(enemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier / 5);
+        StaminaRegen = (int)(enemyClass.BaseAgility * difficultyMultiplier * levelMultiplier / 5);
+        Attack = (int)((enemyClass.BaseStrength * enemyClass.BaseAgility + enemyClass.BaseIntelligence * enemyClass.BaseWisdom) * difficultyMultiplier * levelMultiplier);
+        Defense = (int)((enemyClass.BaseEndurance * enemyClass.BaseStrength + enemyClass.BaseAgility * enemyClass.BaseIntelligence) * difficultyMultiplier * levelMultiplier);
+        Speed = (int)(enemyClass.BaseAgility * 2 * difficultyMultiplier * levelMultiplier);
+        Magic = (int)(enemyClass.BaseIntelligence * enemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier);
 
         Skills = enemyClass.Skills?.ToList() ?? new List<Skill>();
         ExperienceReward = (int)(Level * 10 * difficultyMultiplier);

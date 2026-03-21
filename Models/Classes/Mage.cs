@@ -14,8 +14,22 @@ public class Mage : Class
         BaseLuck = 10;
         Skills = new List<Skill>
         {
+            new StarterStrike(),
+            new StarterGuard(),
+            new ArcaneSpark(),
+            new ArcaneBlast(),
             new Fireball(),
-            new ArcaneSpark()
+            new IceShards(),
+            new LightningBolt(),
+            new ChainLightning(),
+            new Blizzard(),
+            new Meteor(),
+            new MagicShield(),
+            new TemporalShift(),
+            new Heal(),
+            new HolyLight(),
+            new ArcaneWard(),
+            new ManaBarrier()
         };
     }
 }

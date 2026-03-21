@@ -15,6 +15,16 @@ public class PhoenixGuardian : EnemyClass
         BaseCharisma = 14;
         BaseEndurance = 16;
         BaseLuck = 12;
-        Skills = new List<Skill> { new Fireball(), new HolyLight(), new Blizzard() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new Fireball(),
+            new ArcaneBlast(),
+            new Blizzard(),
+            new HolyLight(),
+            new Heal(),
+            new MagicShield()
+        };
     }
 }

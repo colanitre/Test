@@ -15,6 +15,13 @@ public class Goblin : EnemyClass
         BaseCharisma = 4;
         BaseEndurance = 7;
         BaseLuck = 8;
-        Skills = new List<Skill> { new Archery() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new Archery(),
+            new QuickShot(),
+            new VenomStrike()
+        };
     }
 }

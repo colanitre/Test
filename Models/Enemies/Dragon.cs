@@ -15,6 +15,16 @@ public class Dragon : EnemyClass
         BaseCharisma = 12;
         BaseEndurance = 25;
         BaseLuck = 10;
-        Skills = new List<Skill> { new Fireball() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new Fireball(),
+            new ArcaneBlast(),
+            new ChainLightning(),
+            new Blizzard(),
+            new Meteor(),
+            new MagicShield()
+        };
     }
 }

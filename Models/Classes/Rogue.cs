@@ -14,8 +14,14 @@ public class Rogue : Class
         BaseLuck = 15;
         Skills = new List<Skill>
         {
+            new StarterStrike(),
+            new StarterGuard(),
             new ShadowStab(),
-            new Archery()
+            new Backstab(),
+            new DeadlyPoison(),
+            new VenomStrike(),
+            new Evasion(),
+            new RippleStrike()
         };
     }
 }

@@ -15,6 +15,16 @@ public class ShadowAssassin : EnemyClass
         BaseCharisma = 6;
         BaseEndurance = 9;
         BaseLuck = 10;
-        Skills = new List<Skill> { new DeadlyPoison(), new Windslash() };
+        Skills = new List<Skill>
+        {
+            new StarterStrike(),
+            new StarterGuard(),
+            new ShadowStab(),
+            new Backstab(),
+            new DeadlyPoison(),
+            new VenomStrike(),
+            new Evasion(),
+            new Windslash()
+        };
     }
 }

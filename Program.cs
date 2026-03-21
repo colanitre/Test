@@ -78,6 +78,22 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<RpgContext>();
     var creator = db.GetService<IRelationalDatabaseCreator>();
 
+    // Check for database reset marker in development
+    var resetMarkerPath = Path.Combine(Directory.GetCurrentDirectory(), "RESET_DB_MARKER");
+    if (app.Environment.IsDevelopment() && File.Exists(resetMarkerPath))
+    {
+        try
+        {
+            db.Database.EnsureDeleted();
+            db.Database.EnsureCreated();
+            File.Delete(resetMarkerPath);
+        }
+        catch
+        {
+            // Ignore errors during reset
+        }
+    }
+
     // Ensure database exists and migrations/created tables are present.
     // On schema mismatch in dev, recreate automatically.
     if (!creator.HasTables())
@@ -125,48 +141,146 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 
-    // Seed enemy classes if not already present
-    if (!db.EnemyClasses.Any())
+    // Seed starter players/characters so the UI always has selectable data.
+    if (!db.Players.Any())
     {
-        var enemyClasses = new List<EnemyClass>
+        var players = new List<Player>
         {
-            new Goblin(),
-            new Orc(),
-            new Dragon()
+            new() { Username = "hero_one", Email = "hero_one@example.com" },
+            new() { Username = "arcane_ace", Email = "arcane_ace@example.com" }
+        };
+        db.Players.AddRange(players);
+        db.SaveChanges();
+
+        var classMap = db.Classes
+            .Include(c => c.Skills)
+            .ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
+
+        var playerMap = db.Players
+            .ToDictionary(p => p.Username, p => p, StringComparer.OrdinalIgnoreCase);
+
+        var starterCharacters = new List<(string CharacterName, string ClassName, string Username, string Description)>
+        {
+            ("Thane", "Warrior", "hero_one", "A frontline fighter with strong defense."),
+            ("Mira", "Archer", "hero_one", "A precise ranged attacker."),
+            ("Selene", "Mage", "arcane_ace", "A spellcaster focused on elemental damage."),
+            ("Nyx", "Rogue", "arcane_ace", "A swift striker that excels at critical hits.")
         };
 
-        db.EnemyClasses.AddRange(enemyClasses);
+        foreach (var (characterName, className, username, description) in starterCharacters)
+        {
+            if (!classMap.TryGetValue(className, out var playerClass) || !playerMap.TryGetValue(username, out var player))
+            {
+                continue;
+            }
+
+            var character = new Character(characterName, playerClass, player.Id)
+            {
+                Name = characterName,
+                Description = description,
+                Level = 1
+            };
+
+            db.Characters.Add(character);
+        }
+
         db.SaveChanges();
     }
 
-    // Seed enemies if not already present
-    if (!db.Enemies.Any())
+    // Seed all enemy classes that exist in the codebase.
+    var enemyClassSeeds = new List<EnemyClass>
     {
-        var goblinClass = db.EnemyClasses.First(ec => ec.Name == "Goblin");
-        var orcClass = db.EnemyClasses.First(ec => ec.Name == "Orc");
-        var dragonClass = db.EnemyClasses.First(ec => ec.Name == "Ancient Dragon");
+        new Goblin(),
+        new Orc(),
+        new Dragon(),
+        new Skeleton(),
+        new DarkMage(),
+        new Lich(),
+        new Troll(),
+        new ShadowAssassin(),
+        new PhoenixGuardian()
+    };
 
-        var enemies = new List<Enemy>
+    var existingEnemyClassNames = db.EnemyClasses
+        .Select(ec => ec.Name)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var enemyClass in enemyClassSeeds)
+    {
+        if (!existingEnemyClassNames.Contains(enemyClass.Name))
         {
-            new Enemy("Goblin Scout", goblinClass) { Name = "Goblin Scout" },
-            new Enemy("Goblin Warrior", goblinClass) { Name = "Goblin Warrior", Level = 2 },
-            new Enemy("Orc Warrior", orcClass) { Name = "Orc Warrior" },
-            new Enemy("Orc Chieftain", orcClass) { Name = "Orc Chieftain", Level = 5 },
-            new Enemy("Ancient Red Dragon", dragonClass) { Name = "Ancient Red Dragon" },
-            new Enemy("Ancient Blue Dragon", dragonClass) { Name = "Ancient Blue Dragon", Level = 10 },
-            new Enemy("Ancient Green Dragon", dragonClass) { Name = "Ancient Green Dragon", Level = 8 },
-             new Enemy("Ancient Black Dragon", dragonClass) { Name = "Ancient Black Dragon", Level = 12 },
-             new Enemy("Ancient White Dragon", dragonClass) { Name = "Ancient White Dragon", Level = 9 },
-             new Enemy("Ancient Gold Dragon", dragonClass) { Name = "Ancient Gold Dragon", Level = 15 },
-             new Enemy("Ancient Silver Dragon", dragonClass) { Name = "Ancient Silver Dragon", Level = 14 },
-             new Enemy("Ancient Bronze Dragon", dragonClass) { Name = "Ancient Bronze Dragon", Level = 13 },
-             new Enemy("Ancient Copper Dragon", dragonClass) { Name = "Ancient Copper Dragon", Level = 11 },
-             new Enemy("Legendary Brass Dragon", dragonClass) { Name = "Legendary Brass Dragon", Level = 15, Type = EnemyType.Legendary }
+            db.EnemyClasses.Add(enemyClass);
+        }
+    }
+    db.SaveChanges();
+
+    var enemyClassMap = db.EnemyClasses
+        .Include(ec => ec.Skills)
+        .ToDictionary(ec => ec.Name, ec => ec, StringComparer.OrdinalIgnoreCase);
+
+    // Seed enemies so each enemy class is represented in the UI dropdown.
+    var enemySeeds = new List<(string Name, string EnemyClassName, int? Level, EnemyType? Type)>
+    {
+        ("Goblin Scout", "Goblin", null, null),
+        ("Goblin Warrior", "Goblin", 2, null),
+        ("Orc Warrior", "Orc", null, null),
+        ("Orc Chieftain", "Orc", 5, null),
+        ("Skeleton Warrior", "Skeleton", 2, null),
+        ("Dark Mage Acolyte", "Dark Mage", 4, null),
+        ("Troll Brute", "Troll", 6, null),
+        ("Shadow Assassin", "Shadow Assassin", 5, null),
+        ("Lich Overlord", "Lich", 100, EnemyType.Boss),
+        ("Phoenix Guardian", "Phoenix Guardian", 100, EnemyType.Legendary),
+        ("Ancient Red Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient Blue Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient Green Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient Black Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient White Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient Gold Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient Silver Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient Bronze Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Ancient Copper Dragon", "Ancient Dragon", 100, EnemyType.Legendary),
+        ("Legendary Brass Dragon", "Ancient Dragon", 100, EnemyType.Legendary)
+    };
+
+    var existingEnemyNames = db.Enemies
+        .Select(e => e.Name)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var (name, enemyClassName, level, type) in enemySeeds)
+    {
+        if (existingEnemyNames.Contains(name) || !enemyClassMap.TryGetValue(enemyClassName, out var enemyClass))
+        {
+            continue;
+        }
+
+        var enemy = new Enemy(name, enemyClass, level)
+        {
+            Name = name
         };
 
-        db.Enemies.AddRange(enemies);
-        db.SaveChanges();
+        if (type.HasValue)
+        {
+            enemy.Type = type.Value;
+        }
+
+        db.Enemies.Add(enemy);
     }
+
+    // Keep hardest enemies at level 100 even in pre-existing databases.
+    var hardestEnemies = db.Enemies
+        .Where(e => e.Type == EnemyType.Boss || e.Type == EnemyType.Legendary)
+        .ToList();
+
+    foreach (var enemy in hardestEnemies)
+    {
+        if (enemy.Level != 100)
+        {
+            enemy.Level = 100;
+        }
+    }
+
+    db.SaveChanges();
 }
 
 app.Run();

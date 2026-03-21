@@ -11,6 +11,10 @@
     input { width: 140px; margin: 4px 0; }
     button { margin-top: 8px; padding: 8px 12px; border:none; background:#007ACC; color:white; border-radius:5px; cursor:pointer; }
     button:hover { background:#005A9C; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+    th { background: #f4f7fa; }
+    .muted { color: #666; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -20,6 +24,15 @@
     <h2>Damage Curve Config</h2>
     <button id="reloadConfig">Load config</button>
     <div id="curveEditor"></div>
+  </div>
+  <div class="box">
+    <h2>Game Data</h2>
+    <button id="reloadData">Reload players and enemies</button>
+    <div class="muted" id="dataSummary">Loading...</div>
+    <h3>Players</h3>
+    <div id="playersContainer"></div>
+    <h3>Enemies</h3>
+    <div id="enemiesContainer"></div>
   </div>
   <div class="box" id="status"></div>
 
@@ -37,16 +50,131 @@
     try { return JSON.parse(text); } catch { return text; }
   };
 
+  // Keep this schema in sync with Models/DamageCurveConfig.cs
+  const curveFields = [
+    { key: 'CharacterAttackWeight', step: '0.01' },
+    { key: 'CharacterMagicWeight', step: '0.01' },
+    { key: 'CharacterSpeedWeight', step: '0.01' },
+    { key: 'SkillAttackWeight', step: '0.01' },
+    { key: 'SkillMagicWeight', step: '0.01' },
+    { key: 'SkillSpeedWeight', step: '0.01' },
+    { key: 'EnemyDefenseWeight', step: '0.01' },
+    { key: 'EnemyMagicDefenseWeight', step: '0.01' },
+    { key: 'EnemyStaminaDefenseWeight', step: '0.01' },
+    { key: 'EnemyAttackWeight', step: '0.01' },
+    { key: 'EnemyMagicWeight', step: '0.01' },
+    { key: 'EnemySpeedWeight', step: '0.01' },
+    { key: 'CharacterDefenseWeight', step: '0.01' },
+    { key: 'CharacterMagicDefenseWeight', step: '0.01' },
+    { key: 'CharacterStaminaDefenseWeight', step: '0.01' },
+    { key: 'MinimumDamage', step: '1' }
+  ];
+
+  const getCurveValue = (cfg, pascalKey) => {
+    if (cfg && Object.prototype.hasOwnProperty.call(cfg, pascalKey)) {
+      return cfg[pascalKey];
+    }
+    const camelKey = pascalKey.charAt(0).toLowerCase() + pascalKey.slice(1);
+    if (cfg && Object.prototype.hasOwnProperty.call(cfg, camelKey)) {
+      return cfg[camelKey];
+    }
+    return 0;
+  };
+
+  const renderPlayers = (players) => {
+    const container = document.getElementById('playersContainer');
+    if (!Array.isArray(players) || players.length === 0) {
+      container.innerHTML = '<div class="muted">No players found.</div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Characters</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${players.map(p => `
+            <tr>
+              <td>${p.id}</td>
+              <td>${p.username}</td>
+              <td>${p.email}</td>
+              <td>${Array.isArray(p.characters) ? p.characters.length : 0}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+
+  const renderEnemies = (enemies) => {
+    const container = document.getElementById('enemiesContainer');
+    if (!Array.isArray(enemies) || enemies.length === 0) {
+      container.innerHTML = '<div class="muted">No enemies found.</div>';
+      return;
+    }
+
+    const sorted = [...enemies].sort((a, b) => b.level - a.level);
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Type</th>
+            <th>Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map(e => `
+            <tr>
+              <td>${e.id}</td>
+              <td>${e.name}</td>
+              <td>${e.enemyClass?.name || '-'}</td>
+              <td>${e.type}</td>
+              <td>${e.level}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+
+  const refreshData = async () => {
+    const [players, enemies] = await Promise.all([
+      fetchJson('/api/players'),
+      fetchJson('/api/enemies')
+    ]);
+
+    renderPlayers(players);
+    renderEnemies(enemies);
+
+    const playerCount = Array.isArray(players) ? players.length : 0;
+    const enemyCount = Array.isArray(enemies) ? enemies.length : 0;
+    document.getElementById('dataSummary').textContent = `Players: ${playerCount} | Enemies: ${enemyCount}`;
+    log('Loaded players and enemies.');
+  };
+
   const refreshCurve = async () => {
     const cfg = await fetchJson('/api/fights/curve');
     const editor = document.getElementById('curveEditor');
     editor.innerHTML = '';
-    for (const key of Object.keys(cfg)) {
+    for (const field of curveFields) {
+      const key = field.key;
       const container = document.createElement('div');
       const label = document.createElement('label');
       label.textContent = key;
       const input = document.createElement('input');
-      input.type = 'number'; input.step = '0.01'; input.id = `curve_${key}`; input.value = cfg[key];
+      input.type = 'number';
+      input.step = field.step;
+      input.id = `curve_${key}`;
+      input.value = getCurveValue(cfg, key);
       container.appendChild(label);
       container.appendChild(input);
       editor.appendChild(container);
@@ -55,8 +183,10 @@
     saveBtn.textContent = 'Save Curve';
     saveBtn.onclick = async () => {
       const update = {};
-      for (const key of Object.keys(cfg)) {
-        update[key] = parseFloat(document.getElementById(`curve_${key}`).value);
+      for (const field of curveFields) {
+        const key = field.key;
+        const raw = document.getElementById(`curve_${key}`).value;
+        update[key] = key === 'MinimumDamage' ? parseInt(raw, 10) : parseFloat(raw);
       }
       await fetch('/api/fights/curve', {
         method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(update)
@@ -68,7 +198,9 @@
   };
 
   document.getElementById('reloadConfig').onclick = refreshCurve;
+  document.getElementById('reloadData').onclick = refreshData;
   refreshCurve();
+  refreshData();
 </script>
 </body>
 </html>

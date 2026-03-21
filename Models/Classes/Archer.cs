@@ -14,8 +14,14 @@ public class Archer : Class
         BaseLuck = 12;
         Skills = new List<Skill>
         {
+            new StarterStrike(),
+            new StarterGuard(),
             new Archery(),
-            new QuickShot()
+            new QuickShot(),
+            new PiercingShot(),
+            new MultiShot(),
+            new Volley(),
+            new Windslash()
         };
     }
 }
