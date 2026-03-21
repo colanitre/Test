@@ -328,6 +328,7 @@
         <div class="stats-line"><strong>Mana:</strong> <span id="enemyStatsMana">-</span></div>
         <div class="stats-line"><strong>Stamina:</strong> <span id="enemyStatsStamina">-</span></div>
         <div class="stats-line"><strong>Attack/Defense:</strong> <span id="enemyStatsAtkDef">-</span></div>
+        <div class="stats-line"><strong>EXP Reward:</strong> <span id="enemyStatsExp">-</span></div>
         <div class="stats-line"><strong>Regen:</strong> <span id="enemyStatsRegen">-</span></div>
         <div class="stats-line"><strong>Resistances:</strong> <span id="enemyStatsRes">-</span></div>
       </div>
@@ -443,9 +444,9 @@
       logError('Failed to load enemies');
       return;
     }
-    state.enemies = enemies;
+    state.enemies = [...enemies].sort((a, b) => (b.level || 0) - (a.level || 0));
     const select = document.getElementById('enemySelect');
-    select.innerHTML = '<option value="">Select enemy</option>' + enemies.map(e => `<option value="${e.id}">${e.name} (${e.type}, Lv${e.level})</option>`).join('');
+    select.innerHTML = '<option value="">Select enemy</option>' + state.enemies.map(e => `<option value="${e.id}">${e.name} (${e.type}, Lv${e.level}, XP ${e.experienceReward ?? 0})</option>`).join('');
     renderResistanceStats();
   };
 
@@ -540,6 +541,7 @@
     const selectedEnemyId = document.getElementById('enemySelect').value;
     const selectedEnemy = state.enemies.find(e => String(e.id) === String(selectedEnemyId));
     enemyResEl.textContent = selectedEnemy?.enemyClass ? formatResistances(selectedEnemy.enemyClass) : '-';
+    document.getElementById('enemyStatsExp').textContent = selectedEnemy ? String(selectedEnemy.experienceReward ?? '-') : '-';
   };
 
   const renderSkillDetails = (skillId, source = 'active') => {

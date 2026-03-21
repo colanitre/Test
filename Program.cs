@@ -420,15 +420,37 @@ using (var scope = app.Services.CreateScope())
         var playerMap = db.Players
             .ToDictionary(p => p.Username, p => p, StringComparer.OrdinalIgnoreCase);
 
-        var starterCharacters = new List<(string CharacterName, string ClassName, string Username, string Description)>
+        var starterCharacters = new List<(string CharacterName, string ClassName, string Username, string Description, int Level)>
         {
-            ("Thane", "Warrior", "hero_one", "A frontline fighter with strong defense."),
-            ("Mira", "Archer", "hero_one", "A precise ranged attacker."),
-            ("Selene", "Mage", "arcane_ace", "A spellcaster focused on elemental damage."),
-            ("Nyx", "Rogue", "arcane_ace", "A swift striker that excels at critical hits.")
+            ("Thane", "Warrior", "hero_one", "A frontline fighter with strong defense.", 1),
+            ("Mira", "Archer", "hero_one", "A precise ranged attacker.", 1),
+            ("Selene", "Mage", "arcane_ace", "A spellcaster focused on elemental damage.", 29),
+            ("Nyx", "Rogue", "arcane_ace", "A swift striker that excels at critical hits.", 1)
         };
 
-        foreach (var (characterName, className, username, description) in starterCharacters)
+        void ApplySeedLevelStats(Character character)
+        {
+            var extraLevels = Math.Max(0, character.Level - 1);
+            if (extraLevels == 0)
+            {
+                return;
+            }
+
+            character.MaxHealth += 10 * extraLevels;
+            character.MaxMana += 5 * extraLevels;
+            character.MaxStamina += 5 * extraLevels;
+            character.Attack += 2 * extraLevels;
+            character.Defense += 2 * extraLevels;
+            character.Speed += 1 * extraLevels;
+            character.Magic += 1 * extraLevels;
+
+            // Start seeded characters at full resources after stat scaling.
+            character.Health = character.MaxHealth;
+            character.Mana = character.MaxMana;
+            character.Stamina = character.MaxStamina;
+        }
+
+        foreach (var (characterName, className, username, description, level) in starterCharacters)
         {
             if (!classMap.TryGetValue(className, out var playerClass) || !playerMap.TryGetValue(username, out var player))
             {
@@ -439,8 +461,10 @@ using (var scope = app.Services.CreateScope())
             {
                 Name = characterName,
                 Description = description,
-                Level = 1
+                Level = level
             };
+
+            ApplySeedLevelStats(character);
 
             db.Characters.Add(character);
         }
@@ -507,6 +531,24 @@ using (var scope = app.Services.CreateScope())
         ("Troll Juggernaut", "Troll", 35, EnemyType.Boss),
         ("Shadow Duelist", "Shadow Assassin", 26, EnemyType.Elite),
         ("Shadow Executioner", "Shadow Assassin", 40, EnemyType.Boss),
+        ("Goblin War Engineer", "Goblin", 27, EnemyType.Elite),
+        ("Goblin Shadow Sniper", "Goblin", 34, EnemyType.Elite),
+        ("Orc Bloodguard", "Orc", 31, EnemyType.Elite),
+        ("Orc Ironbreaker", "Orc", 43, EnemyType.Elite),
+        ("Skeleton Blade Dancer", "Skeleton", 29, EnemyType.Elite),
+        ("Skeleton Deathcaller", "Skeleton", 38, EnemyType.Elite),
+        ("Dark Mage Voidcaller", "Dark Mage", 46, EnemyType.Elite),
+        ("Dark Mage Doombinder", "Dark Mage", 59, EnemyType.Elite),
+        ("Troll Stonehide", "Troll", 48, EnemyType.Elite),
+        ("Troll Mountainbreaker", "Troll", 68, EnemyType.Elite),
+        ("Shadow Nightblade", "Shadow Assassin", 52, EnemyType.Elite),
+        ("Shadow Soulrender", "Shadow Assassin", 74, EnemyType.Elite),
+        ("Lich Soulweaver", "Lich", 57, EnemyType.Elite),
+        ("Lich Grave Oracle", "Lich", 83, EnemyType.Elite),
+        ("Phoenix Ember Sentinel", "Phoenix Guardian", 63, EnemyType.Elite),
+        ("Phoenix Dawnfire", "Phoenix Guardian", 92, EnemyType.Elite),
+        ("Ancient Dragon Flamewing", "Dragon", 71, EnemyType.Elite),
+        ("Ancient Dragon Skyterror", "Dragon", 97, EnemyType.Elite),
         ("Phoenix Warden", "Phoenix Guardian", 45, EnemyType.Boss),
         ("Lich Disciple", "Lich", 32, EnemyType.Boss),
         ("Lich Archon", "Lich", 60, EnemyType.Legendary),
@@ -535,16 +577,16 @@ using (var scope = app.Services.CreateScope())
         ("Godlike Void Sovereign", "Shadow Assassin", 800, EnemyType.Godlike),
         ("Godlike Celestial Harbinger", "Phoenix Guardian", 900, EnemyType.Godlike),
         ("Godlike Eternal Omnarch", "Dragon", 1000, EnemyType.Godlike),
-        ("Zeus, Skyfather of Storms", "Olympian Skyfather", 1100, EnemyType.Godlike),
-        ("Poseidon, Tidelord of Ruin", "Olympian Sea Lord", 1200, EnemyType.Godlike),
-        ("Hades, Sovereign of the Underworld", "Olympian Underworld King", 1300, EnemyType.Godlike),
         ("Athena, Aegis Strategos", "Olympian Skyfather", 1400, EnemyType.Godlike),
         ("Ares, War Incarnate", "Olympian Warbringer", 1500, EnemyType.Godlike),
         ("Artemis, Moonhunt Eternal", "Olympian Sea Lord", 1600, EnemyType.Godlike),
         ("Apollo, Solar Oracle", "Olympian Radiant Oracle", 1700, EnemyType.Godlike),
         ("Hephaestus, Forge of Cataclysm", "Olympian Warbringer", 1800, EnemyType.Godlike),
         ("Hermes, Swift Beyond Dawn", "Olympian Skyfather", 1900, EnemyType.Godlike),
-        ("Hera, Throne of Olympus", "Olympian Radiant Oracle", 2000, EnemyType.Godlike)
+        ("Hera, Throne of Olympus", "Olympian Radiant Oracle", 2000, EnemyType.Godlike),
+        ("Zeus, Skyfather of Storms", "Olympian Skyfather", 2100, EnemyType.Godlike),
+        ("Poseidon, Tidelord of Ruin", "Olympian Sea Lord", 2200, EnemyType.Godlike),
+        ("Hades, Sovereign of the Underworld", "Olympian Underworld King", 2300, EnemyType.Godlike)
     };
 
     var existingEnemyNames = db.Enemies
@@ -574,16 +616,17 @@ using (var scope = app.Services.CreateScope())
     // Keep Greek god enemies aligned with the dedicated Olympian enemy classes.
     var greekGodClassMap = new Dictionary<string, (string EnemyClassName, int Level)>(StringComparer.OrdinalIgnoreCase)
     {
-        ["Zeus, Skyfather of Storms"] = ("Olympian Skyfather", 1100),
-        ["Poseidon, Tidelord of Ruin"] = ("Olympian Sea Lord", 1200),
-        ["Hades, Sovereign of the Underworld"] = ("Olympian Underworld King", 1300),
+
         ["Athena, Aegis Strategos"] = ("Olympian Skyfather", 1400),
         ["Ares, War Incarnate"] = ("Olympian Warbringer", 1500),
         ["Artemis, Moonhunt Eternal"] = ("Olympian Sea Lord", 1600),
         ["Apollo, Solar Oracle"] = ("Olympian Radiant Oracle", 1700),
         ["Hephaestus, Forge of Cataclysm"] = ("Olympian Warbringer", 1800),
         ["Hermes, Swift Beyond Dawn"] = ("Olympian Skyfather", 1900),
-        ["Hera, Throne of Olympus"] = ("Olympian Radiant Oracle", 2000)
+        ["Hera, Throne of Olympus"] = ("Olympian Radiant Oracle", 2000),
+        ["Zeus, Skyfather of Storms"] = ("Olympian Skyfather", 2100),
+        ["Poseidon, Tidelord of Ruin"] = ("Olympian Sea Lord", 2200),
+        ["Hades, Sovereign of the Underworld"] = ("Olympian Underworld King", 2300)
     };
 
     var greekGods = db.Enemies
