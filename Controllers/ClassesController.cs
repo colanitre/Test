@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RpgApi.Data;
+using RpgApi.Models;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace RpgApi.Controllers;
 
@@ -52,6 +55,53 @@ public class ClassesController : ControllerBase
                 c.Skills.Count));
 
         return Ok(result);
+    }
+
+    [HttpGet("/api/v1/classes")]
+    public async Task<ActionResult<ApiEnvelope<object>>> GetClassesV1()
+    {
+        var classes = await _context.Classes
+            .Include(c => c.Skills)
+            .OrderBy(c => c.Archetype)
+            .ThenBy(c => c.Tier)
+            .ThenBy(c => c.Branch)
+            .ThenBy(c => c.Name)
+            .ToListAsync();
+
+        var tagSource = string.Join("|", classes.Select(c => $"{c.Id}:{c.Name}:{c.Tier}:{c.RequiredLevel}:{c.Skills.Count}"));
+        var etag = ComputeWeakETag(tagSource);
+        if (Request.Headers.IfNoneMatch.Any(h => h == etag))
+            return StatusCode(StatusCodes.Status304NotModified);
+
+        Response.Headers.ETag = etag;
+
+        var result = classes.Select(c => new ClassAdminDto(
+            c.Id,
+            c.Name,
+            c.Archetype,
+            c.Tier,
+            c.RequiredLevel,
+            c.IsAdvanced,
+            c.Branch,
+            c.BaseStrength,
+            c.BaseAgility,
+            c.BaseIntelligence,
+            c.BaseWisdom,
+            c.BaseCharisma,
+            c.BaseEndurance,
+            c.BaseLuck,
+            c.Skills.Count));
+
+        return Ok(new ApiEnvelope<object>(
+            new { items = result, resistanceFormat = "multiplier" },
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
+    private static string ComputeWeakETag(string source)
+    {
+        using var sha = SHA256.Create();
+        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(source));
+        return $"W/\"{Convert.ToHexString(bytes)}\"";
     }
 }
 

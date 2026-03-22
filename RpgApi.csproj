@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="RpgApi.IntegrationTests/**" />
+    <Content Remove="RpgApi.IntegrationTests/**" />
+    <EmbeddedResource Remove="RpgApi.IntegrationTests/**" />
+    <None Remove="RpgApi.IntegrationTests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

@@ -17,6 +17,11 @@ public class RpgContext : DbContext
     public DbSet<EnemyClass> EnemyClasses { get; set; }
     public DbSet<FightSession> FightSessions { get; set; }
     public DbSet<FightMove> FightMoves { get; set; }
+    public DbSet<CharacterLoadout> CharacterLoadouts { get; set; }
+    public DbSet<ProgressionEvent> ProgressionEvents { get; set; }
+    public DbSet<RogueliteRun> RogueliteRuns { get; set; }
+    public DbSet<TalentNode> TalentNodes { get; set; }
+    public DbSet<CharacterEquipment> CharacterEquipments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +84,21 @@ public class RpgContext : DbContext
 
         modelBuilder.Entity<FightMove>()
             .HasIndex(m => m.FightSessionId);
+
+        modelBuilder.Entity<CharacterLoadout>()
+            .HasIndex(l => new { l.PlayerId, l.CharacterId });
+
+        modelBuilder.Entity<ProgressionEvent>()
+            .HasIndex(e => e.Timestamp);
+
+        modelBuilder.Entity<RogueliteRun>()
+            .HasIndex(r => new { r.PlayerId, r.CharacterId });
+
+        modelBuilder.Entity<TalentNode>()
+            .HasIndex(t => t.ClassName);
+
+        modelBuilder.Entity<CharacterEquipment>()
+            .HasKey(e => e.CharacterId);
 
     }
 }

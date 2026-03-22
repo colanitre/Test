@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RpgApi.Data;
 using RpgApi.Models;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace RpgApi.Controllers
 {
@@ -33,6 +35,33 @@ public class EnemiesController : ControllerBase
             .ToListAsync();
 
         return Ok(enemies.Select(ToDto));
+    }
+
+    [HttpGet("/api/v1/enemies")]
+    public async Task<ActionResult<ApiEnvelope<object>>> GetEnemiesV1()
+    {
+        var enemies = await _context.Enemies
+            .Include(e => e.EnemyClass)
+            .Include(e => e.Skills)
+            .ToListAsync();
+
+        var tagSource = string.Join("|", enemies.Select(e => $"{e.Id}:{e.Name}:{e.Level}:{e.ExperienceReward}"));
+        var etag = ComputeWeakETag(tagSource);
+        if (Request.Headers.IfNoneMatch.Any(h => h == etag))
+            return StatusCode(StatusCodes.Status304NotModified);
+
+        Response.Headers.ETag = etag;
+
+        return Ok(new ApiEnvelope<object>(
+            new { items = enemies.Select(ToDto), resistanceFormat = "multiplier" },
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
+    private static string ComputeWeakETag(string source)
+    {
+        using var sha = SHA256.Create();
+        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(source));
+        return $"W/\"{Convert.ToHexString(bytes)}\"";
     }
 
     /// <summary>

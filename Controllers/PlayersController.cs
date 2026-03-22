@@ -19,6 +19,38 @@ public class PlayersController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("/api/v1/players")]
+    public async Task<ActionResult<ApiEnvelope<IEnumerable<PlayerDto>>>> GetPlayersV1()
+    {
+        var players = await _context.Players
+            .Include(p => p.Characters)
+            .ToListAsync();
+
+        return Ok(new ApiEnvelope<IEnumerable<PlayerDto>>(
+            players.Select(ToDto),
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
+    [HttpGet("/api/v1/players/{id}")]
+    public async Task<ActionResult<ApiEnvelope<PlayerDto>>> GetPlayerV1(int id)
+    {
+        var player = await _context.Players
+            .Include(p => p.Characters)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (player == null)
+        {
+            return NotFound(new ApiEnvelope<PlayerDto>(
+                default,
+                new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier),
+                new ApiError("not_found", "Player not found")));
+        }
+
+        return Ok(new ApiEnvelope<PlayerDto>(
+            ToDto(player),
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
     /// <summary>
     /// Get all players
     /// </summary>

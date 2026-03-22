@@ -19,6 +19,127 @@ public class CharactersController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("/api/v1/players/{playerId}/characters")]
+    public async Task<ActionResult<ApiEnvelope<IEnumerable<CharacterDetailDto>>>> GetCharactersV1(int playerId)
+    {
+        var result = await GetCharacters(playerId);
+        if (result.Result is ObjectResult objectResult)
+        {
+            var status = objectResult.StatusCode ?? StatusCodes.Status500InternalServerError;
+            var message = objectResult.Value?.GetType().GetProperty("message")?.GetValue(objectResult.Value)?.ToString() ?? "Request failed";
+            return StatusCode(status, new ApiEnvelope<IEnumerable<CharacterDetailDto>>(
+                default,
+                new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier),
+                new ApiError("request_failed", message, objectResult.Value)));
+        }
+
+        return Ok(new ApiEnvelope<IEnumerable<CharacterDetailDto>>(
+            result.Value,
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
+    [HttpGet("/api/v1/players/{playerId}/characters/{id}")]
+    public async Task<ActionResult<ApiEnvelope<CharacterDetailDto>>> GetCharacterV1(int playerId, int id)
+    {
+        var result = await GetCharacter(playerId, id);
+        if (result.Result is ObjectResult objectResult)
+        {
+            var status = objectResult.StatusCode ?? StatusCodes.Status500InternalServerError;
+            var message = objectResult.Value?.GetType().GetProperty("message")?.GetValue(objectResult.Value)?.ToString() ?? "Request failed";
+            return StatusCode(status, new ApiEnvelope<CharacterDetailDto>(
+                default,
+                new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier),
+                new ApiError("request_failed", message, objectResult.Value)));
+        }
+
+        return Ok(new ApiEnvelope<CharacterDetailDto>(
+            result.Value,
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
+    [HttpGet("/api/v1/players/{playerId}/characters/{id}/loadouts")]
+    public async Task<ActionResult<ApiEnvelope<IEnumerable<CharacterLoadoutEntry>>>> GetLoadoutsV1(int playerId, int id)
+    {
+        var characterExists = await _context.Characters.AnyAsync(c => c.Id == id && c.PlayerId == playerId);
+        if (!characterExists)
+        {
+            return NotFound(new ApiEnvelope<IEnumerable<CharacterLoadoutEntry>>(
+                default,
+                new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier),
+                new ApiError("character_not_found", "Character not found")));
+        }
+
+        var entries = await _context.CharacterLoadouts
+            .Where(l => l.PlayerId == playerId && l.CharacterId == id)
+            .OrderByDescending(l => l.UpdatedAt)
+            .Select(l => new CharacterLoadoutEntry(l.Id, l.Name, l.GetActiveSkillOrder(), l.GetPassiveSkillIds(), l.UpdatedAt))
+            .ToListAsync();
+
+        return Ok(new ApiEnvelope<IEnumerable<CharacterLoadoutEntry>>(
+            entries,
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
+    [HttpPut("/api/v1/players/{playerId}/characters/{id}/loadouts/{loadoutId}")]
+    public async Task<ActionResult<ApiEnvelope<CharacterLoadoutEntry>>> PutLoadoutV1(
+        int playerId,
+        int id,
+        Guid loadoutId,
+        [FromBody] UpsertLoadoutDto dto)
+    {
+        var character = await _context.Characters
+            .Include(c => c.Skills)
+            .FirstOrDefaultAsync(c => c.Id == id && c.PlayerId == playerId);
+        if (character == null)
+        {
+            return NotFound(new ApiEnvelope<CharacterLoadoutEntry>(
+                default,
+                new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier),
+                new ApiError("character_not_found", "Character not found")));
+        }
+
+        var skillIds = character.Skills.Select(s => s.Id).ToHashSet();
+        if (dto.ActiveSkillOrder.Any(sid => !skillIds.Contains(sid)) || dto.PassiveSkillIds.Any(sid => !skillIds.Contains(sid)))
+        {
+            return BadRequest(new ApiEnvelope<CharacterLoadoutEntry>(
+                default,
+                new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier),
+                new ApiError("invalid_skills", "Loadout contains skills not available to this character")));
+        }
+
+        var entry = new CharacterLoadoutEntry(loadoutId, dto.Name, dto.ActiveSkillOrder, dto.PassiveSkillIds, DateTime.UtcNow);
+
+        var existing = await _context.CharacterLoadouts
+            .FirstOrDefaultAsync(l => l.Id == loadoutId && l.PlayerId == playerId && l.CharacterId == id);
+        if (existing != null)
+        {
+            existing.Name = entry.Name;
+            existing.SetActiveSkillOrder(entry.ActiveSkillOrder);
+            existing.SetPassiveSkillIds(entry.PassiveSkillIds);
+            existing.UpdatedAt = entry.UpdatedAt;
+        }
+        else
+        {
+            var entity = new CharacterLoadout
+            {
+                Id = entry.Id,
+                PlayerId = playerId,
+                CharacterId = id,
+                Name = entry.Name,
+                UpdatedAt = entry.UpdatedAt
+            };
+            entity.SetActiveSkillOrder(entry.ActiveSkillOrder);
+            entity.SetPassiveSkillIds(entry.PassiveSkillIds);
+            await _context.CharacterLoadouts.AddAsync(entity);
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new ApiEnvelope<CharacterLoadoutEntry>(
+            entry,
+            new ApiMeta(DateTime.UtcNow, HttpContext.TraceIdentifier)));
+    }
+
     /// <summary>
     /// Get all characters for a specific player
     /// </summary>
@@ -452,4 +573,6 @@ public record ClassUpgradeSkillDto(
     double ElementPowerMultiplier);
 
 public record UpgradeClassDto(string ClassName);
+
+public record UpsertLoadoutDto(string Name, List<int> ActiveSkillOrder, List<int> PassiveSkillIds);
 }

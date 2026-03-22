@@ -76,7 +76,17 @@ app.MapFallbackToFile("index.html");
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<RpgContext>();
-    var creator = db.GetService<IRelationalDatabaseCreator>();
+    // Skip relational schema checks when using a non-relational provider (e.g. InMemory for tests)
+    var creator = db.Database.ProviderName?.Contains("InMemory") == true
+        ? null
+        : db.GetService<IRelationalDatabaseCreator>();
+
+    if (creator == null)
+    {
+        // InMemory: just ensure the schema is created
+        db.Database.EnsureCreated();
+        goto SeedData;
+    }
 
     // Check for database reset marker in development
     var resetMarkerPath = Path.Combine(Directory.GetCurrentDirectory(), "RESET_DB_MARKER");
@@ -170,7 +180,36 @@ using (var scope = app.Services.CreateScope())
                 throw new InvalidOperationException("Database schema is incompatible: missing character progression columns.");
             }
         }
+
+        var hasProgressionPersistenceTables = true;
+        try
+        {
+            _ = db.CharacterLoadouts.Select(l => l.Name).FirstOrDefault();
+            _ = db.ProgressionEvents.Select(e => e.Type).FirstOrDefault();
+            _ = db.RogueliteRuns.Select(r => r.CharacterId).FirstOrDefault();
+            _ = db.TalentNodes.Select(t => t.Name).FirstOrDefault();
+            _ = db.CharacterEquipments.Select(e => e.CharacterId).FirstOrDefault();
+        }
+        catch (SqliteException)
+        {
+            hasProgressionPersistenceTables = false;
+        }
+
+        if (!hasProgressionPersistenceTables)
+        {
+            if (app.Environment.IsDevelopment())
+            {
+                db.Database.EnsureDeleted();
+                db.Database.EnsureCreated();
+            }
+            else
+            {
+                throw new InvalidOperationException("Database schema is incompatible: missing progression persistence tables.");
+            }
+        }
     }
+
+    SeedData:
 
     void SyncClassSkills(RpgApi.Models.Class targetClass, IEnumerable<Skill> seededSkills)
     {
@@ -702,3 +741,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// Expose the program class to the test project via WebApplicationFactory<Program>
+public partial class Program { }
