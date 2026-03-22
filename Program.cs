@@ -450,7 +450,7 @@ using (var scope = app.Services.CreateScope())
         {
             ("Thane", "Warrior", "hero_one", "A frontline fighter with strong defense.", 1),
             ("Mira", "Archer", "hero_one", "A precise ranged attacker.", 1),
-            ("Selene", "Mage", "arcane_ace", "A spellcaster focused on elemental damage.", 50),
+            ("Selene", "Mage", "arcane_ace", "A spellcaster focused on elemental damage.", 150),
             ("Nyx", "Rogue", "arcane_ace", "A swift striker that excels at critical hits.", 1)
         };
 
