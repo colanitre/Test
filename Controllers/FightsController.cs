@@ -515,8 +515,11 @@ public class FightsController : ControllerBase
 
     private async Task GrantExperience(Character character, int reward)
     {
+        const double levelXpBase = 80.0;
+        const double levelXpGrowth = 1.12;
+
         var xp = character.Experience + reward;
-        double threshold = 100.0 * Math.Pow(1.2, character.Level);
+        double threshold = levelXpBase * Math.Pow(levelXpGrowth, character.Level);
 
         while (xp >= threshold)
         {
@@ -535,7 +538,7 @@ public class FightsController : ControllerBase
             character.Speed += 1;
             character.Magic += 1;
 
-            threshold *= 1.2;
+            threshold *= levelXpGrowth;
         }
 
         character.Experience = xp;

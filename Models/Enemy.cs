@@ -92,9 +92,9 @@ public class Enemy
         Magic = Math.Max(0, (int)(EnemyClass.BaseIntelligence * EnemyClass.BaseWisdom * difficultyMultiplier * levelMultiplier));
 
         Skills = EnemyClass.Skills?.ToList() ?? new List<Skill>();
-        var highLevelXpScale = effectiveLevel <= 30
+        var highLevelXpScale = effectiveLevel <= 50
             ? 1.0
-            : Math.Pow(1.18, effectiveLevel - 30);
+            : 1.0 + ((effectiveLevel - 50) * 0.015);
 
         var rawExperienceReward = effectiveLevel * 10.0 * difficultyMultiplier * highLevelXpScale;
         ExperienceReward = rawExperienceReward >= int.MaxValue
