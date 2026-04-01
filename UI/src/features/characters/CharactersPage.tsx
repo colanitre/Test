@@ -3,13 +3,18 @@ import { Link } from "react-router-dom";
 import { Panel } from "../../components/ui/Panel";
 import {
   AVAILABLE_CLASSES,
+  type CharacterProgressionDetail,
   type CharacterRow,
+  type ClassUpgradeOption,
   type PlayerRow,
   createCharacter,
   deleteCharacter,
+  fetchCharacterProgressionDetail,
+  fetchClassUpgrades,
   fetchCharacters,
   fetchPlayersBasic,
   renameCharacter,
+  upgradeCharacterClass,
 } from "./charactersApi";
 
 type EditState = { id: number; name: string; description: string };
@@ -36,6 +41,16 @@ export function CharactersPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Class progression
+  const [progressionCharacterId, setProgressionCharacterId] = useState<number | null>(null);
+  const [progressionOptions, setProgressionOptions] = useState<ClassUpgradeOption[]>([]);
+  const [selectedProgressionOptionId, setSelectedProgressionOptionId] = useState<number | null>(null);
+  const [progressionCharacterDetail, setProgressionCharacterDetail] = useState<CharacterProgressionDetail | null>(null);
+  const [isLoadingProgression, setIsLoadingProgression] = useState(false);
+  const [isUpgradingClass, setIsUpgradingClass] = useState<string | null>(null);
+  const [progressionError, setProgressionError] = useState<string | null>(null);
+  const [progressionSuccess, setProgressionSuccess] = useState<string | null>(null);
+
   useEffect(() => {
     fetchPlayersBasic()
       .then((rows) => {
@@ -48,6 +63,10 @@ export function CharactersPage() {
   useEffect(() => {
     if (!selectedPlayerId) {
       setCharacters([]);
+      setProgressionCharacterId(null);
+      setProgressionOptions([]);
+      setSelectedProgressionOptionId(null);
+      setProgressionCharacterDetail(null);
       return;
     }
     setLoading(true);
@@ -57,6 +76,55 @@ export function CharactersPage() {
       .catch(() => setError("Could not load characters."))
       .finally(() => setLoading(false));
   }, [selectedPlayerId]);
+
+  useEffect(() => {
+    if (characters.length === 0) {
+      setProgressionCharacterId(null);
+      setProgressionOptions([]);
+      setSelectedProgressionOptionId(null);
+      setProgressionCharacterDetail(null);
+      return;
+    }
+
+    const stillValid = progressionCharacterId && characters.some((character) => character.id === progressionCharacterId);
+    if (!stillValid) {
+      setProgressionCharacterId(characters[0].id);
+    }
+  }, [characters, progressionCharacterId]);
+
+  useEffect(() => {
+    if (!selectedPlayerId || !progressionCharacterId) {
+      setProgressionOptions([]);
+      setSelectedProgressionOptionId(null);
+      setProgressionCharacterDetail(null);
+      setProgressionError(null);
+      return;
+    }
+
+    setIsLoadingProgression(true);
+    setProgressionError(null);
+
+    Promise.all([
+      fetchClassUpgrades(selectedPlayerId, progressionCharacterId),
+      fetchCharacterProgressionDetail(selectedPlayerId, progressionCharacterId)
+    ])
+      .then(([items, detail]) => {
+        setProgressionOptions(items);
+        setProgressionCharacterDetail(detail);
+        setSelectedProgressionOptionId((current) =>
+          current && items.some((option) => option.id === current)
+            ? current
+            : (items[0]?.id ?? null)
+        );
+      })
+      .catch(() => {
+        setProgressionOptions([]);
+        setSelectedProgressionOptionId(null);
+        setProgressionCharacterDetail(null);
+        setProgressionError("No class progression options available right now.");
+      })
+      .finally(() => setIsLoadingProgression(false));
+  }, [progressionCharacterId, selectedPlayerId]);
 
   const flash = (msg: string) => {
     setSuccess(msg);
@@ -125,6 +193,45 @@ export function CharactersPage() {
       setIsDeleting(false);
     }
   };
+
+  const handleUpgradeClass = async (nextClassName: string) => {
+    if (!selectedPlayerId || !progressionCharacterId) {
+      return;
+    }
+
+    setIsUpgradingClass(nextClassName);
+    setProgressionError(null);
+    setProgressionSuccess(null);
+
+    try {
+      const upgraded = await upgradeCharacterClass(selectedPlayerId, progressionCharacterId, nextClassName);
+
+      setCharacters((current) =>
+        current.map((character) => (character.id === upgraded.id ? { ...character, ...upgraded } : character))
+      );
+      setProgressionSuccess(`${upgraded.name} advanced to ${upgraded.class?.name ?? nextClassName}.`);
+
+      const [refreshedOptions, refreshedDetail] = await Promise.all([
+        fetchClassUpgrades(selectedPlayerId, progressionCharacterId),
+        fetchCharacterProgressionDetail(selectedPlayerId, progressionCharacterId)
+      ]);
+      setProgressionOptions(refreshedOptions);
+      setProgressionCharacterDetail(refreshedDetail);
+      setSelectedProgressionOptionId(refreshedOptions[0]?.id ?? null);
+    } catch {
+      setProgressionError("Class upgrade failed. Check level requirements and branch restrictions.");
+    } finally {
+      setIsUpgradingClass(null);
+    }
+  };
+
+  const progressionCharacter = characters.find((character) => character.id === progressionCharacterId) ?? null;
+  const selectedProgressionOption = progressionOptions.find((option) => option.id === selectedProgressionOptionId) ?? null;
+  const unlockedSkills = selectedProgressionOption
+    ? selectedProgressionOption.skills.filter(
+        (skill) => !progressionCharacterDetail?.skills.some((existing) => existing.id === skill.id)
+      )
+    : [];
 
   return (
     <main className="page">
@@ -301,7 +408,126 @@ export function CharactersPage() {
             })}
           </div>
         </Panel>
+
+        <Panel title="Class Progression">
+          <div className="progression-layout">
+            <div>
+              <label htmlFor="progression-character">Choose character</label>
+              <select
+                id="progression-character"
+                value={progressionCharacterId ?? ""}
+                onChange={(event) => setProgressionCharacterId(event.target.value ? Number(event.target.value) : null)}
+              >
+                <option value="">Select character</option>
+                {characters.map((character) => (
+                  <option key={character.id} value={character.id}>
+                    {character.name} | {character.class?.name ?? "Unknown"} | Lv {character.level}
+                  </option>
+                ))}
+              </select>
+
+              <p className="progression-help">
+                Current: {progressionCharacter ? `${progressionCharacter.class?.name ?? "Unknown"} (Tier ${progressionCharacter.class?.tier ?? 0})` : "-"}
+              </p>
+              <p className="progression-help">
+                Level: {progressionCharacter?.level ?? "-"}
+              </p>
+
+              {progressionSuccess && <p className="success-msg">{progressionSuccess}</p>}
+              {progressionError && <p className="error">{progressionError}</p>}
+            </div>
+
+            <div>
+              <p className="section-label">Available Upgrades</p>
+              {isLoadingProgression && <p className="progression-help">Loading progression options...</p>}
+              {!isLoadingProgression && progressionOptions.length === 0 && (
+                <p className="progression-help">No upgrade options yet. Level up or unlock branch requirements.</p>
+              )}
+
+              <div className="progression-list">
+                {progressionOptions.map((option) => (
+                  <div
+                    key={option.id}
+                    className={`progression-item ${selectedProgressionOptionId === option.id ? "progression-item-selected" : ""}`}
+                  >
+                    <strong>{option.name}</strong>
+                    <span>Tier {option.tier} | Required Lv {option.requiredLevel}</span>
+                    <span>Archetype: {option.archetype}</span>
+                    <span>Skills unlocked: {option.skills.length}</span>
+                    <button
+                      className="button button-accent"
+                      type="button"
+                      disabled={isUpgradingClass !== null}
+                      onClick={() => setSelectedProgressionOptionId(option.id)}
+                    >
+                      Preview
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {selectedProgressionOption && (
+                <div className="progression-preview">
+                  <p className="section-label">Preview</p>
+                  <p className="progression-help">
+                    {progressionCharacterDetail?.class?.name ?? "Current"} → {selectedProgressionOption.name}
+                  </p>
+                  <div className="progression-delta-grid">
+                    {buildStatDeltas(progressionCharacterDetail, selectedProgressionOption).map((row) => (
+                      <div key={row.label} className="progression-delta-row">
+                        <span>{row.label}</span>
+                        <span className={row.delta > 0 ? "delta-positive" : row.delta < 0 ? "delta-negative" : "delta-neutral"}>
+                          {row.current} → {row.next} ({row.delta >= 0 ? "+" : ""}{row.delta})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="progression-unlocks">
+                    <p className="progression-help">Newly unlocked skills</p>
+                    {unlockedSkills.length === 0 ? (
+                      <p className="progression-help">No new skills from this class.</p>
+                    ) : (
+                      <ul className="progression-unlocks-list">
+                        {unlockedSkills.map((skill) => (
+                          <li key={skill.id}>{skill.name} (Lv {skill.requiredLevel})</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={
+                      !progressionCharacter ||
+                      progressionCharacter.level < selectedProgressionOption.requiredLevel ||
+                      isUpgradingClass !== null
+                    }
+                    onClick={() => void handleUpgradeClass(selectedProgressionOption.name)}
+                  >
+                    {isUpgradingClass === selectedProgressionOption.name ? "Upgrading..." : "Confirm Progression"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Panel>
       </div>
     </main>
   );
+}
+
+function buildStatDeltas(detail: CharacterProgressionDetail | null, option: ClassUpgradeOption) {
+  const current = detail?.class;
+  return [
+    { label: "Strength", current: current?.baseStrength ?? 0, next: option.baseStrength },
+    { label: "Agility", current: current?.baseAgility ?? 0, next: option.baseAgility },
+    { label: "Intelligence", current: current?.baseIntelligence ?? 0, next: option.baseIntelligence },
+    { label: "Wisdom", current: current?.baseWisdom ?? 0, next: option.baseWisdom },
+    { label: "Charisma", current: current?.baseCharisma ?? 0, next: option.baseCharisma },
+    { label: "Endurance", current: current?.baseEndurance ?? 0, next: option.baseEndurance },
+    { label: "Luck", current: current?.baseLuck ?? 0, next: option.baseLuck }
+  ].map((row) => ({
+    ...row,
+    delta: row.next - row.current
+  }));
 }

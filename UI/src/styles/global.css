@@ -656,6 +656,56 @@ select {
   font-size: 0.84rem;
 }
 
+.progression-item-selected {
+  border-color: rgba(142, 232, 194, 0.52);
+  background: rgba(20, 45, 57, 0.58);
+}
+
+.progression-preview {
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  border-radius: 10px;
+  background: rgba(12, 23, 39, 0.82);
+  border: 1px solid rgba(136, 160, 212, 0.25);
+}
+
+.progression-delta-grid {
+  display: grid;
+  gap: 0.18rem;
+  margin-top: 0.35rem;
+}
+
+.progression-delta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+}
+
+.delta-positive {
+  color: #81f0a6;
+}
+
+.delta-negative {
+  color: #ff9ea0;
+}
+
+.delta-neutral {
+  color: #b7c9ee;
+}
+
+.progression-unlocks {
+  margin-top: 0.5rem;
+}
+
+.progression-unlocks-list {
+  margin: 0.2rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.79rem;
+}
+
 @media (max-width: 700px) {
   .char-mgmt-layout {
     grid-template-columns: 1fr;
